@@ -61,7 +61,10 @@
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
           <p>Your AI creation will appear here</p>
         </div>
-        <img id="result-image" alt="AI generated image" referrerpolicy="no-referrer" style="display:none">
+        <div class="morph-container" id="morph-container" style="display:none">
+          <img id="result-image" alt="AI generated image" referrerpolicy="no-referrer">
+          <canvas id="sketch-overlay"></canvas>
+        </div>
         <div class="result-actions" id="result-actions" style="display:none">
           <button id="download-btn" class="action-btn">Download</button>
           <button id="retry-btn" class="action-btn secondary">Regenerate</button>
