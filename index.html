@@ -7,8 +7,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- API Key Setup Overlay -->
+  <div id="setup-overlay" class="setup-overlay" style="display:none">
+    <div class="setup-card">
+      <h2>Welcome to LivingColor</h2>
+      <p>To analyze your drawings, this app needs a Google Gemini API key.</p>
+      <p class="setup-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
+      <input type="password" id="api-key-input" class="api-key-input" placeholder="Paste your Gemini API key here" autocomplete="off" />
+      <button id="save-key-btn" class="generate-btn" style="width:100%">Save &amp; Start Drawing</button>
+      <p id="setup-error" class="setup-error"></p>
+    </div>
+  </div>
+
   <header>
-    <h1>LivingColor</h1>
+    <div class="header-row">
+      <h1>LivingColor</h1>
+      <button id="settings-btn" class="settings-btn" title="API key settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
     <p class="tagline">Draw something, then watch AI bring it to life</p>
   </header>
 
@@ -63,10 +80,16 @@
         </div>
         <div class="morph-container" id="morph-container" style="display:none">
           <img id="result-image" alt="AI generated image" referrerpolicy="no-referrer">
+          <video id="result-video" autoplay loop muted playsinline style="display:none"></video>
           <canvas id="sketch-overlay"></canvas>
+        </div>
+        <div class="video-status" id="video-status" style="display:none">
+          <span class="spinner"></span>
+          <span id="video-status-text">Generating video...</span>
         </div>
         <div class="result-actions" id="result-actions" style="display:none">
           <button id="download-btn" class="action-btn">Download</button>
+          <button id="download-video-btn" class="action-btn" style="display:none">Download Video</button>
           <button id="retry-btn" class="action-btn secondary">Regenerate</button>
         </div>
       </div>
@@ -101,7 +124,7 @@
   </main>
 
   <footer>
-    <p>Powered by <a href="https://pollinations.ai" target="_blank" rel="noopener">Pollinations.ai</a> — free, no sign-up required</p>
+    <p>Powered by <a href="https://pollinations.ai" target="_blank" rel="noopener">Pollinations.ai</a> + <a href="https://deepmind.google/technologies/veo/" target="_blank" rel="noopener">Google Veo</a></p>
   </footer>
 
   <script src="app.js"></script>

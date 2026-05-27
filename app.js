@@ -6,7 +6,9 @@ const COLORS = [
 
 const POLLINATIONS_IMAGE = 'https://image.pollinations.ai/prompt/';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-const GEMINI_KEY = 'AIzaSyC1CgTurH_IOd4TrnzPIVpmWn3f7Rh37Cw';
+const VEO_URL = 'https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning';
+const VEO_POLL_URL = 'https://generativelanguage.googleapis.com/v1beta/';
+const VEO_POLL_INTERVAL = 5000;
 
 let canvas, ctx;
 let drawing = false;
@@ -14,7 +16,86 @@ let currentColor = '#000000';
 let currentTool = 'brush';
 let brushSize = 8;
 let history = [];
+let lastGeneratedPrompt = '';
+let veoAbort = null;
 const MAX_HISTORY = 30;
+
+function getApiKey() {
+  return localStorage.getItem('gemini_key') || '';
+}
+
+function setApiKey(key) {
+  localStorage.setItem('gemini_key', key.trim());
+}
+
+function showSetup(prefill) {
+  const overlay = document.getElementById('setup-overlay');
+  const input = document.getElementById('api-key-input');
+  const errEl = document.getElementById('setup-error');
+  overlay.style.display = 'flex';
+  errEl.textContent = '';
+  if (prefill) input.value = prefill;
+  input.focus();
+}
+
+function hideSetup() {
+  document.getElementById('setup-overlay').style.display = 'none';
+}
+
+function setupApiKey() {
+  const saveBtn = document.getElementById('save-key-btn');
+  const input = document.getElementById('api-key-input');
+  const errEl = document.getElementById('setup-error');
+
+  async function trySave() {
+    const key = input.value.trim();
+    if (!key) {
+      errEl.textContent = 'Please paste your API key.';
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Validating...';
+    errEl.textContent = '';
+
+    try {
+      const res = await fetch(GEMINI_URL + '?key=' + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Say "ok"' }] }]
+        })
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.error?.message || 'Invalid API key (HTTP ' + res.status + ')';
+        throw new Error(msg);
+      }
+      setApiKey(key);
+      hideSetup();
+    } catch (e) {
+      errEl.textContent = e.message;
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save & Start Drawing';
+    }
+  }
+
+  saveBtn.addEventListener('click', trySave);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') trySave();
+  });
+
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    showSetup(getApiKey());
+  });
+
+  // Allow closing overlay by clicking backdrop (only if key already saved)
+  document.getElementById('setup-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget && getApiKey()) hideSetup();
+  });
+
+  if (!getApiKey()) showSetup();
+}
 
 function init() {
   canvas = document.getElementById('drawing-canvas');
@@ -23,6 +104,7 @@ function init() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
+  setupApiKey();
   setupColors();
   setupTools();
   setupCanvas();
@@ -184,6 +266,7 @@ function setupKeyboard() {
 function setupGenerate() {
   document.getElementById('generate-btn').addEventListener('click', generate);
   document.getElementById('download-btn')?.addEventListener('click', downloadResult);
+  document.getElementById('download-video-btn')?.addEventListener('click', downloadVideoResult);
   document.getElementById('retry-btn')?.addEventListener('click', generate);
 }
 
@@ -232,12 +315,18 @@ function getCanvasBase64() {
 }
 
 async function analyzeDrawing(styleHint) {
+  const key = getApiKey();
+  if (!key) {
+    showSetup();
+    throw new Error('API key required — please enter your Gemini key.');
+  }
+
   const b64 = getCanvasBase64();
   const systemPrompt = styleHint
     ? 'Describe this hand drawing for an image generator. The user wants it in this style: "' + styleHint + '". Write a vivid 2-3 sentence image generation prompt describing a polished version. Output ONLY the prompt.'
     : 'Describe this hand drawing for an image generator. Write a vivid 2-3 sentence image generation prompt that brings this sketch to life as a polished, detailed artwork. Mention subject, composition, colors, lighting, and mood. Output ONLY the prompt.';
 
-  const res = await fetch(GEMINI_URL + '?key=' + GEMINI_KEY, {
+  const res = await fetch(GEMINI_URL + '?key=' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -251,7 +340,11 @@ async function analyzeDrawing(styleHint) {
   });
 
   if (!res.ok) {
-    const err = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem('gemini_key');
+      showSetup();
+      throw new Error('API key rejected — please enter a valid key.');
+    }
     throw new Error('Vision API error (' + res.status + ')');
   }
 
@@ -362,12 +455,19 @@ async function generate() {
     return;
   }
 
+  // Abort any in-progress Veo poll
+  if (veoAbort) { veoAbort.abort(); veoAbort = null; }
+
+  // Reset video state
+  resetVideoUI();
+
   setLoading(true);
   const styleHint = document.getElementById('style-prompt').value.trim();
   setStatus('AI is analyzing your drawing...');
 
   try {
     const prompt = await analyzeDrawing(styleHint);
+    lastGeneratedPrompt = prompt;
     setStatus('Generating: ' + prompt.slice(0, 60) + '...');
     loadResultImage(prompt);
   } catch (err) {
@@ -383,9 +483,15 @@ function loadResultImage(prompt) {
   const url = POLLINATIONS_IMAGE + encoded + '?width=768&height=768&seed=' + seed + '&nologo=true';
 
   const resultImg = document.getElementById('result-image');
+  const resultVideo = document.getElementById('result-video');
   const placeholder = document.getElementById('result-placeholder');
   const morphContainer = document.getElementById('morph-container');
   const actions = document.getElementById('result-actions');
+
+  // Show image, hide video from previous run
+  resultImg.style.display = '';
+  resultVideo.style.display = 'none';
+  resultVideo.src = '';
 
   captureSketch();
 
@@ -396,6 +502,9 @@ function loadResultImage(prompt) {
     morphContainer.style.display = 'flex';
     actions.style.display = 'flex';
     setTimeout(playMorph, 300);
+
+    // Kick off Veo video generation from the loaded image
+    startVeoGeneration(prompt, resultImg);
   };
   resultImg.onerror = () => {
     setLoading(false);
@@ -405,9 +514,203 @@ function loadResultImage(prompt) {
 }
 
 function downloadResult() {
+  const video = document.getElementById('result-video');
+  if (video.style.display !== 'none' && video.src) {
+    // If video is showing, download the video
+    downloadVideoResult();
+    return;
+  }
   const img = document.getElementById('result-image');
   if (!img.src) return;
   window.open(img.src, '_blank');
+}
+
+function downloadVideoResult() {
+  const video = document.getElementById('result-video');
+  if (!video.src) return;
+  const a = document.createElement('a');
+  a.href = video.src;
+  a.download = 'livingcolor-video.mp4';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* --- Veo Video Generation --- */
+
+function resetVideoUI() {
+  const videoStatus = document.getElementById('video-status');
+  const videoBtn = document.getElementById('download-video-btn');
+  const resultVideo = document.getElementById('result-video');
+  videoStatus.style.display = 'none';
+  videoStatus.className = 'video-status';
+  videoBtn.style.display = 'none';
+  resultVideo.style.display = 'none';
+  resultVideo.src = '';
+}
+
+function setVideoStatus(msg, state) {
+  const el = document.getElementById('video-status');
+  const textEl = document.getElementById('video-status-text');
+  el.style.display = 'flex';
+  textEl.textContent = msg;
+  el.className = 'video-status' + (state ? ' ' + state : '');
+}
+
+function imageToBase64(imgEl) {
+  const tmp = document.createElement('canvas');
+  tmp.width = 768;
+  tmp.height = 768;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(imgEl, 0, 0, 768, 768);
+  return tmp.toDataURL('image/png').split(',')[1];
+}
+
+async function startVeoGeneration(prompt, imgEl) {
+  const key = getApiKey();
+  if (!key) return;
+
+  // Cancel previous poll if any
+  if (veoAbort) { veoAbort.abort(); veoAbort = null; }
+
+  const controller = new AbortController();
+  veoAbort = controller;
+
+  setVideoStatus('Submitting video generation...');
+
+  try {
+    const imgB64 = imageToBase64(imgEl);
+    const veoPrompt = 'Smooth cinematic animation of: ' + prompt + '. Gentle camera movement, natural motion, vivid lighting.';
+
+    const res = await fetch(VEO_URL + '?key=' + key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        instances: [{
+          prompt: veoPrompt,
+          image: { bytesBase64Encoded: imgB64, mimeType: 'image/png' }
+        }],
+        parameters: {
+          sampleCount: 1,
+          durationSeconds: 6,
+          aspectRatio: '16:9'
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const errMsg = body?.error?.message || 'HTTP ' + res.status;
+      if (res.status === 429) {
+        setVideoStatus('Video rate limited — try again later', 'error');
+      } else if (res.status === 401 || res.status === 403) {
+        setVideoStatus('API key lacks Veo access', 'error');
+      } else {
+        setVideoStatus('Video error: ' + errMsg, 'error');
+      }
+      return;
+    }
+
+    const data = await res.json();
+    const operationName = data.name;
+    if (!operationName) {
+      setVideoStatus('No operation returned from Veo', 'error');
+      return;
+    }
+
+    setVideoStatus('Generating video... (polling)');
+    await pollVeoOperation(operationName, key, controller);
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    console.error('Veo error:', e);
+    setVideoStatus('Video generation failed: ' + e.message, 'error');
+  }
+}
+
+async function pollVeoOperation(opName, key, controller) {
+  const pollUrl = VEO_POLL_URL + opName + '?key=' + key;
+  let attempts = 0;
+  const maxAttempts = 120; // 10 minutes at 5s intervals
+
+  while (attempts < maxAttempts) {
+    if (controller.signal.aborted) return;
+
+    await new Promise(r => setTimeout(r, VEO_POLL_INTERVAL));
+    attempts++;
+
+    if (controller.signal.aborted) return;
+
+    try {
+      const res = await fetch(pollUrl, { signal: controller.signal });
+      if (!res.ok) {
+        if (res.status === 429) {
+          setVideoStatus('Polling rate limited, waiting...');
+          await new Promise(r => setTimeout(r, 10000));
+          continue;
+        }
+        const body = await res.json().catch(() => ({}));
+        setVideoStatus('Poll error: ' + (body?.error?.message || 'HTTP ' + res.status), 'error');
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.done) {
+        if (data.error) {
+          setVideoStatus('Video failed: ' + (data.error.message || 'Unknown error'), 'error');
+          return;
+        }
+        const samples = data.response?.generateVideoResponse?.generatedSamples;
+        if (!samples || samples.length === 0) {
+          setVideoStatus('Video generation returned no results', 'error');
+          return;
+        }
+        const videoB64 = samples[0].video?.bytesBase64Encoded;
+        if (!videoB64) {
+          setVideoStatus('Video response missing data', 'error');
+          return;
+        }
+        showGeneratedVideo(videoB64);
+        return;
+      }
+
+      // Not done yet — update status
+      const pct = data.metadata?.percentComplete;
+      if (pct != null) {
+        setVideoStatus('Generating video... ' + pct + '%');
+      } else {
+        setVideoStatus('Generating video... (attempt ' + attempts + ')');
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      console.error('Poll error:', e);
+      setVideoStatus('Poll error: ' + e.message, 'error');
+      return;
+    }
+  }
+
+  setVideoStatus('Video generation timed out', 'error');
+}
+
+function showGeneratedVideo(b64) {
+  const resultImg = document.getElementById('result-image');
+  const resultVideo = document.getElementById('result-video');
+  const videoBtn = document.getElementById('download-video-btn');
+
+  // Convert base64 to blob URL for the video element
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: 'video/mp4' });
+  const url = URL.createObjectURL(blob);
+
+  resultVideo.src = url;
+  resultVideo.style.display = '';
+  resultImg.style.display = 'none';
+  videoBtn.style.display = '';
+
+  setVideoStatus('Video ready!', 'done');
 }
 
 document.addEventListener('DOMContentLoaded', init);
