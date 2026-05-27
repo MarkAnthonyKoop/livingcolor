@@ -207,6 +207,17 @@ main {
   background: #111;
 }
 
+#result-image.alive {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  25% { transform: scale(1.04) translate(-1%, -1%); }
+  50% { transform: scale(1.06) translate(0.5%, -0.5%); }
+  75% { transform: scale(1.03) translate(1%, 0.5%); }
+}
+
 .result-actions {
   display: flex;
   gap: 0.5rem;
@@ -317,6 +328,23 @@ main {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+.suggestion.wiggle {
+  animation: wiggle 0.4s ease;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+#style-prompt.pulse {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .status {

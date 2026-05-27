@@ -5,7 +5,6 @@ const COLORS = [
 ];
 
 const POLLINATIONS_IMAGE = 'https://image.pollinations.ai/prompt/';
-const POLLINATIONS_TEXT = 'https://text.pollinations.ai/';
 
 let canvas, ctx;
 let drawing = false;
@@ -189,7 +188,10 @@ function setupGenerate() {
 function setupSuggestions() {
   document.querySelectorAll('.suggestion').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.getElementById('style-prompt').value = btn.dataset.prompt;
+      const input = document.getElementById('style-prompt');
+      input.value = btn.dataset.prompt;
+      input.classList.add('pulse');
+      setTimeout(() => input.classList.remove('pulse'), 400);
     });
   });
 }
@@ -240,52 +242,44 @@ function closestColorName(r, g, b) {
   return best;
 }
 
-async function enhancePrompt(description) {
+function buildPrompt(description) {
   const colors = analyzeCanvasColors();
-  const colorNote = colors.length > 0 ? ' The drawing uses ' + colors.join(', ') + ' colors.' : '';
-  const prompt = 'Turn this into a vivid 2-sentence image generation prompt. ' +
-    'Describe a polished, detailed version of: ' + description + '.' + colorNote +
-    ' Output ONLY the scene description, nothing else.';
-  try {
-    const res = await fetch(POLLINATIONS_TEXT + encodeURIComponent(prompt));
-    if (!res.ok) throw new Error('enhance failed');
-    const text = await res.text();
-    if (text.length > 20 && !text.includes('NOTICE') && !text.includes('deprecated')) {
-      return text.trim();
-    }
-  } catch (e) {
-    // fall through to manual prompt
-  }
-  let manual = description;
+  let prompt = description;
   if (colors.length > 0) {
-    manual += ', featuring ' + colors.join(' and ') + ' tones';
+    prompt += ', in ' + colors.join(' and ') + ' tones';
   }
-  manual += ', highly detailed, professional quality, vivid colors, beautiful lighting';
-  return manual;
+  prompt += ', highly detailed, professional quality, vivid colors, beautiful lighting, masterpiece';
+  return prompt;
+}
+
+function isCanvasBlank() {
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const step = 16;
+  for (let i = 0; i < data.length; i += 4 * step) {
+    if (data[i] < 240 || data[i + 1] < 240 || data[i + 2] < 240) return false;
+  }
+  return true;
 }
 
 async function generate() {
   const description = document.getElementById('style-prompt').value.trim();
+
   if (!description) {
-    setStatus('Tell the AI what you drew — type a description or click a suggestion below', true);
+    if (isCanvasBlank()) {
+      setStatus('Draw something first, then click Bring to Life!', true);
+    } else {
+      setStatus('Tell the AI what you drew — type it or click a suggestion below', true);
+      document.querySelectorAll('.suggestion').forEach(s => s.classList.add('wiggle'));
+      setTimeout(() => document.querySelectorAll('.suggestion').forEach(s => s.classList.remove('wiggle')), 600);
+    }
     document.getElementById('style-prompt').focus();
     return;
   }
 
   setLoading(true);
-  setStatus('Enhancing your description with AI...');
+  setStatus('Generating your image...');
 
-  try {
-    const prompt = await enhancePrompt(description);
-    setStatus('Generating image...');
-    loadResultImage(prompt);
-  } catch (err) {
-    setLoading(false);
-    setStatus('Error: ' + err.message, true);
-  }
-}
-
-function loadResultImage(prompt) {
+  const prompt = buildPrompt(description);
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
   const url = POLLINATIONS_IMAGE + encoded + '?width=768&height=768&seed=' + seed + '&nologo=true';
@@ -299,6 +293,7 @@ function loadResultImage(prompt) {
     setStatus('');
     placeholder.style.display = 'none';
     resultImg.style.display = 'block';
+    resultImg.classList.add('alive');
     actions.style.display = 'flex';
   };
   resultImg.onerror = () => {
