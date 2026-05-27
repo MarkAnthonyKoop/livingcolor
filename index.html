@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LivingColor — Draw It, Live It</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>LivingColor</h1>
+    <p class="tagline">Draw something, then watch AI bring it to life</p>
+  </header>
+
+  <main>
+    <section class="workspace">
+      <div class="canvas-panel">
+        <div class="toolbar">
+          <div class="tool-group">
+            <button class="tool-btn active" data-tool="brush" title="Brush">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="eraser" title="Eraser">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l10-10 8 8-4 4"/><path d="M6.5 13.5l5-5"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="fill" title="Fill Canvas">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 22l1-1h3l9-9"/><path d="M3 21v-3l9-9 3 3-9 9"/><path d="M14 6l3-3 3 3"/><path d="M20 14c1 1 2 2 2 3.5S21 20 20 20s-2-1.5-2-2.5S19 15 20 14z"/></svg>
+            </button>
+          </div>
+
+          <div class="tool-group">
+            <label class="size-label" title="Brush size">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+              <input type="range" id="brush-size" min="1" max="80" value="8">
+              <span id="size-display">8</span>
+            </label>
+          </div>
+
+          <div class="tool-group actions">
+            <button id="undo-btn" class="tool-btn" title="Undo (Ctrl+Z)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+            <button id="clear-btn" class="tool-btn" title="Clear canvas">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="color-bar">
+          <div class="color-swatches" id="color-swatches"></div>
+          <input type="color" id="custom-color" value="#000000" title="Custom color">
+        </div>
+
+        <div class="canvas-container">
+          <canvas id="drawing-canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="result-panel" id="result-panel">
+        <div class="result-placeholder" id="result-placeholder">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <p>Your AI creation will appear here</p>
+        </div>
+        <img id="result-image" alt="AI generated image" style="display:none">
+        <div class="result-actions" id="result-actions" style="display:none">
+          <button id="download-btn" class="action-btn">Download</button>
+          <button id="retry-btn" class="action-btn secondary">Regenerate</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="generate-section">
+      <div class="prompt-row">
+        <input type="text" id="style-prompt" placeholder="Describe what you drew — e.g. &quot;a cat on a rooftop at sunset&quot; or &quot;dragon in a forest, watercolor style&quot;" />
+        <button id="generate-btn" class="generate-btn">
+          <span class="btn-text">Bring to Life</span>
+          <span class="btn-loading" style="display:none">
+            <span class="spinner"></span>
+            Generating...
+          </span>
+        </button>
+      </div>
+      <p class="hint">Draw your idea above, then describe it here. AI will turn your vision into a polished image.</p>
+      <p class="status" id="status"></p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Powered by <a href="https://pollinations.ai" target="_blank" rel="noopener">Pollinations.ai</a> — free, no sign-up required</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
