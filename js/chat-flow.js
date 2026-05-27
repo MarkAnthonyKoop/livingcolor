@@ -20,49 +20,44 @@ const EMOJI_ITEMS = [
   { emoji: '🎂', label: 'cake' },       { emoji: '🚀', label: 'rocket' },
 ];
 
-// Step 1: Send drawing to Gemini for recognition
+// Step 1: Send drawing for recognition (backend with Gemini→Perplexity fallback)
 async function recognizeDrawing() {
-  const key = getApiKey();
-  if (!key) { showSetup(); throw new Error('API key required'); }
   const b64 = getCanvasBase64();
-
-  const res = await fetch(GEMINI_URL + '?key=' + key, {
+  const res = await fetch('/api/recognize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [
-        { text: 'You are a warm, playful AI friend talking to a young child (age 2-5) who just drew a picture. Look at their drawing and react with genuine excitement. Guess what they drew in 1-2 short, simple sentences. Use 1-2 emojis. Ask if you guessed right. Keep it very simple -- short words, big feelings. Also output on a separate final line prefixed with "SUBJECT:" the single-word or two-word subject you see (e.g. "SUBJECT: cat").' },
-        { inline_data: { mime_type: 'image/jpeg', data: b64 } }
-      ]}]
-    })
+    body: JSON.stringify({ image: b64 })
   });
-
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('gemini_key');
-      showSetup();
-      throw new Error('API key rejected');
-    }
-    throw new Error('Vision API error (' + res.status + ')');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Recognition failed (' + res.status + ')');
   }
-
   const data = await res.json();
-  const text = data.candidates[0].content.parts[0].text.trim();
-  // Parse out SUBJECT line
-  const lines = text.split('\n');
-  const subjectLine = lines.find(l => l.startsWith('SUBJECT:'));
-  const subject = subjectLine ? subjectLine.replace('SUBJECT:', '').trim() : '';
-  const message = lines.filter(l => !l.startsWith('SUBJECT:')).join('\n').trim();
-  return { message, subject };
+  return { message: data.message, subject: data.subject };
 }
 
-// Step 2: Generate image via Pollinations
-function generateImage(subject, styleHint) {
-  const prompt = styleHint
-    ? subject + ', ' + styleHint + ', highly detailed, vivid colors, beautiful lighting, masterpiece'
-    : 'A beautiful, vibrant ' + subject + ', highly detailed, professional quality, vivid colors, beautiful lighting, masterpiece, children illustration style';
-  setLastGeneratedPrompt(prompt);
+// Step 2: Generate image via backend prompt + Pollinations
+async function generateImage(subject, styleHint) {
+  let prompt;
+  try {
+    const mode = document.getElementById('animation-mode')?.checked ? 'faithful' : 'reimagine';
+    const res = await fetch('/api/generate-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, style: styleHint, mode })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      prompt = data.prompt;
+    }
+  } catch (e) { /* fallback below */ }
 
+  if (!prompt) {
+    prompt = styleHint
+      ? subject + ', ' + styleHint + ', highly detailed, vivid colors, masterpiece'
+      : 'A beautiful, vibrant ' + subject + ', highly detailed, vivid colors, masterpiece';
+  }
+  setLastGeneratedPrompt(prompt);
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
   return {
@@ -137,7 +132,7 @@ async function startGeneration(subject) {
   appendMessage({ role: 'ai', type: 'loading', content: 'I\'m painting your ' + subject + '... 🎨' });
 
   const styleHint = document.getElementById('style-prompt').value.trim();
-  const { url, prompt } = generateImage(subject, styleHint);
+  const { url, prompt } = await generateImage(subject, styleHint);
 
   // Load the image
   const img = new Image();
@@ -161,18 +156,34 @@ async function startGeneration(subject) {
 }
 
 async function startVideoForChat(prompt, subject) {
-  try {
-    await startVeoGeneration(prompt, null, (videoSrc) => {
-      removeLoading();
-      appendMessage({ role: 'ai', type: 'video', content: videoSrc, caption: 'Wow! Your ' + subject + ' is alive! 🌟' });
-      appendMessage({ role: 'ai', type: 'text', content: 'Do you want to draw something new? 🖍️' });
-      showButtons([
-        { label: 'Draw again! 🎨', value: 'again', color: 'btn-green' },
-      ]);
-      setButtonHandler(() => { hideButtons(); });
-    });
-  } catch (e) {
+  let done = false;
+  const onVideo = (videoSrc) => {
+    if (done) return;
+    done = true;
     removeLoading();
-    appendMessage({ role: 'ai', type: 'text', content: 'Your ' + subject + ' is so cool! Do you want to draw something new? 🖍️' });
+    appendMessage({ role: 'ai', type: 'video', content: videoSrc, caption: 'Wow! Your ' + subject + ' is alive! 🌟' });
+    finishChat(subject);
+  };
+
+  try {
+    await startVeoGeneration(prompt, null, onVideo);
+  } catch (e) {
+    console.error('Video gen error:', e);
   }
+
+  // Veo/poll finished (or errored). If callback hasn't fired yet, LTX fallback
+  // may still be running. Don't block -- just wait a bit then finish gracefully.
+  if (!done) {
+    setTimeout(() => {
+      if (!done) { done = true; removeLoading(); finishChat(subject); }
+    }, 120000);
+  }
+}
+
+function finishChat(subject) {
+  appendMessage({ role: 'ai', type: 'text', content: 'Do you want to draw something new? 🖍️' });
+  showButtons([
+    { label: 'Draw again! 🎨', value: 'again', color: 'btn-green' },
+  ]);
+  setButtonHandler(() => { hideButtons(); });
 }

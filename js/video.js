@@ -9,7 +9,7 @@ import { getApiKey } from './setup.js';
 import { stopMagicEffect } from './particles.js';
 import {
   setVideoStatus, stopStoryboard,
-  startVideoFallback,
+  startVideoFallback, setLtxVideoCallback,
 } from './storyboard.js';
 
 export { setVideoStatus };
@@ -115,7 +115,10 @@ export async function startVeoGeneration(prompt, imgEl, chatCallback) {
   const key = getApiKey();
   if (!key) return;
 
-  if (chatCallback) onVideoReady = chatCallback;
+  if (chatCallback) {
+    onVideoReady = chatCallback;
+    setLtxVideoCallback(chatCallback);
+  }
 
   if (getVeoAbort()) { getVeoAbort().abort(); setVeoAbort(null); }
 
