@@ -1,7 +1,10 @@
-// Storyboard: generate scene prompts via Gemini, load Pollinations frames, animate.
+// Animation: Gemini writes animation prompts, LTX generates video from image.
+// Two modes: "reimagine" (default) = AI interprets + animates,
+//            "faithful" = animate the drawing as-is.
 
-import { GEMINI_URL, POLLINATIONS_IMAGE } from './state.js';
+import { GEMINI_URL } from './state.js';
 import { getApiKey } from './setup.js';
+import { getCanvasBase64 } from './canvas.js';
 import { startMagicEffect } from './particles.js';
 
 let storyboardAnim = null;
@@ -14,7 +17,7 @@ export function setVideoStatus(msg, state) {
   el.className = 'video-status' + (state ? ' ' + state : '');
 }
 
-function stopStoryboard() {
+export function stopStoryboard() {
   if (storyboardAnim) {
     clearInterval(storyboardAnim);
     storyboardAnim = null;
@@ -24,143 +27,105 @@ function stopStoryboard() {
   resultImg.style.opacity = '1';
 }
 
-function playStoryboard(images) {
-  stopStoryboard();
-  const resultImg = document.getElementById('result-image');
-  const overlay = document.getElementById('sketch-overlay');
-  overlay.style.opacity = '0';
-
-  let current = 0;
-  const frameDuration = 3000;
-  const fadeTime = 1000;
-
-  resultImg.style.transition = 'opacity ' + fadeTime + 'ms ease-in-out';
-
-  function nextFrame() {
-    current = (current + 1) % images.length;
-    resultImg.style.opacity = '0';
-    setTimeout(() => {
-      resultImg.src = images[current];
-      resultImg.onload = () => {
-        resultImg.style.opacity = '1';
-      };
-    }, fadeTime);
-  }
-
-  storyboardAnim = setInterval(nextFrame, frameDuration);
-  setVideoStatus('Storyboard animation playing (' + images.length + ' scenes)', 'done');
-}
-
-export async function generateStoryboard(basePrompt) {
+async function getAnimationPrompt(basePrompt, mode) {
   const key = getApiKey();
   if (!key) return null;
+
+  const instruction = mode === 'faithful'
+    ? 'Write a short animation prompt (1-2 sentences) for subtle, gentle motion of this scene. Keep it simple — small movements, breathing, swaying. Scene: "' + basePrompt + '". Output ONLY the animation prompt.'
+    : 'Write a vivid, cinematic animation prompt (2-3 sentences) for this scene coming fully to life. Describe dramatic, creative motion: characters moving, interacting, the environment reacting. Be imaginative — add story, surprise, emotion. Scene: "' + basePrompt + '". Output ONLY the animation prompt.';
 
   try {
     const res = await fetch(GEMINI_URL + '?key=' + key, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: 'I have this image description: "' + basePrompt + '". Write 4 short image prompts showing this scene animated across 4 moments (like a storyboard). Each should be 1 sentence, describing a different moment of gentle motion/change. Output ONLY 4 lines, one prompt per line, no numbering.'
-          }]
-        }]
+        contents: [{ parts: [{ text: instruction }] }]
       })
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const text = data.candidates[0].content.parts[0].text.trim();
-    const scenes = text.split('\n').filter(l => l.trim().length > 10).slice(0, 4);
-    return scenes.length >= 3 ? scenes : null;
+    return data.candidates[0].content.parts[0].text.trim();
   } catch (e) {
     return null;
   }
 }
 
-export async function loadStoryboardImages(scenes, basePrompt) {
-  if (!scenes && basePrompt) {
-    setVideoStatus('Creating storyboard...');
-    scenes = await generateStoryboard(basePrompt);
-    if (!scenes) return;
-  }
-  if (!scenes) return;
-  setVideoStatus('Generating storyboard (' + scenes.length + ' scenes)...');
+function showVideo(blobUrl) {
+  const resultVideo = document.getElementById('result-video');
+  const resultImg = document.getElementById('result-image');
+  resultVideo.src = blobUrl;
+  resultVideo.style.display = '';
+  resultImg.style.display = 'none';
+  document.getElementById('download-video-btn').style.display = '';
+}
 
-  const urls = scenes.map((scene) => {
-    const encoded = encodeURIComponent(scene + ', highly detailed, vivid, masterpiece');
-    const seed = Math.floor(Math.random() * 999999);
-    return POLLINATIONS_IMAGE + encoded + '?width=768&height=768&seed=' + seed + '&nologo=true';
+async function generateLtxVideo(prompt, imageBase64, mode) {
+  const { Client } = await import(
+    'https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js'
+  );
+  const client = await Client.connect("Lightricks/ltx-video-distilled");
+
+  const useImage = mode === 'faithful' && imageBase64;
+  const apiName = useImage ? '/image_to_video' : '/text_to_video';
+  const imageInput = useImage
+    ? { url: 'data:image/jpeg;base64,' + imageBase64 }
+    : null;
+
+  const result = await client.predict(apiName, {
+    prompt: prompt,
+    negative_prompt: 'blurry, distorted, worst quality, static, frozen',
+    input_image_filepath: imageInput,
+    input_video_filepath: null,
+    height_ui: 512,
+    width_ui: 512,
+    mode: useImage ? 'image-to-video' : 'text-to-video',
+    duration_ui: 4,
+    ui_frames_to_use: 9,
+    seed_ui: 42,
+    randomize_seed: true,
+    ui_guidance_scale: useImage ? 3 : 1,
+    improve_texture_flag: false,
   });
 
-  const loaded = [];
-  for (let i = 0; i < urls.length; i++) {
-    setVideoStatus('Loading scene ' + (i + 1) + '/' + urls.length + '...');
-    try {
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = urls[i];
-      });
-      loaded.push(urls[i]);
-    } catch (e) {
-      // skip failed frames
-    }
-  }
+  const videoData = result.data[0];
+  const videoUrl = videoData?.video?.url || videoData?.url;
+  if (!videoUrl) throw new Error('No video URL in response');
 
-  if (loaded.length >= 2) {
-    playStoryboard(loaded);
-  } else {
-    setVideoStatus('Could not load enough frames', 'error');
-    startMagicEffect();
-  }
+  const resp = await fetch(videoUrl);
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
 }
 
-export async function startVideoFallback(prompt) {
-  setVideoStatus('Creating storyboard animation...');
-  const scenes = await generateStoryboard(prompt);
-  if (scenes) {
-    loadStoryboardImages(scenes);
-    return;
-  }
+export function getAnimationMode() {
+  const toggle = document.getElementById('animation-mode');
+  return toggle && toggle.checked ? 'faithful' : 'reimagine';
+}
+
+export async function startVideoFallback(basePrompt) {
+  const mode = getAnimationMode();
+
+  setVideoStatus(mode === 'faithful'
+    ? 'Animating your drawing...'
+    : 'Creating cinematic animation...');
+
+  const animPrompt = await getAnimationPrompt(basePrompt, mode);
+  const prompt = animPrompt || basePrompt + ', smooth cinematic animation';
+
+  setVideoStatus('Generating video (~30-60s)...');
 
   try {
-    const { Client } = await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
-    const client = await Client.connect("Lightricks/ltx-video-distilled");
-    setVideoStatus('Generating video via LTX (free, ~30s)...');
-
-    const result = await client.predict("/text_to_video", {
-      prompt: prompt,
-      negative_prompt: "blurry, distorted, worst quality",
-      height_ui: 512,
-      width_ui: 512,
-      mode: "text-to-video",
-      duration_ui: 2,
-      seed_ui: 42,
-      randomize_seed: true,
-      ui_guidance_scale: 1,
-      improve_texture_flag: false,
-    });
-
-    const videoData = result.data[0];
-    const videoUrl = videoData?.video?.url || videoData?.url;
-    if (!videoUrl) throw new Error('No video URL');
-
-    const resp = await fetch(videoUrl);
-    const blob = await resp.blob();
-    const blobUrl = URL.createObjectURL(blob);
-
-    document.getElementById('result-video').src = blobUrl;
-    document.getElementById('result-video').style.display = '';
-    document.getElementById('result-image').style.display = 'none';
-    document.getElementById('download-video-btn').style.display = '';
-    setVideoStatus('Video ready! (via LTX)', 'done');
+    const canvasB64 = mode === 'faithful' ? getCanvasBase64() : null;
+    const blobUrl = await generateLtxVideo(prompt, canvasB64, mode);
+    showVideo(blobUrl);
+    setVideoStatus('Video ready!', 'done');
   } catch (e) {
-    console.error('LTX fallback error:', e);
-    setVideoStatus('Enjoy the magic effect!', 'error');
+    console.error('Video generation error:', e);
+    if (e.message?.includes('quota')) {
+      setVideoStatus('Free GPU quota reached — try again in a few minutes', 'error');
+    } else {
+      setVideoStatus('Video generation failed — enjoy the magic effect!', 'error');
+    }
     startMagicEffect();
   }
 }
-
-export { stopStoryboard };

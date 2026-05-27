@@ -9,11 +9,10 @@ import { getApiKey } from './setup.js';
 import { stopMagicEffect } from './particles.js';
 import {
   setVideoStatus, stopStoryboard,
-  loadStoryboardImages, startVideoFallback,
+  startVideoFallback,
 } from './storyboard.js';
 
-// Re-export so generate.js can import from video.js
-export { setVideoStatus, loadStoryboardImages };
+export { setVideoStatus };
 
 export function resetVideoUI() {
   stopMagicEffect();

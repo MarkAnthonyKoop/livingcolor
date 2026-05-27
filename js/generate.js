@@ -6,7 +6,7 @@ import {
 } from './state.js';
 import { isCanvasBlank, getCanvasBase64 } from './canvas.js';
 import { getApiKey, showSetup } from './setup.js';
-import { startVeoGeneration, loadStoryboardImages, resetVideoUI } from './video.js';
+import { startVeoGeneration, resetVideoUI } from './video.js';
 import { captureSketch, playMorph } from './morph.js';
 
 export function setStatus(msg, isError) {
@@ -88,7 +88,6 @@ function loadResultImage(prompt) {
     actions.style.display = 'flex';
     setTimeout(playMorph, 300);
 
-    loadStoryboardImages(null, prompt);
     startVeoGeneration(prompt, resultImg);
   };
   resultImg.onerror = () => {
