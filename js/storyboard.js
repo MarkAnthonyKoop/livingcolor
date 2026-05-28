@@ -6,6 +6,7 @@ import { GEMINI_URL } from './state.js';
 import { getApiKey } from './setup.js';
 import { getCanvasBase64 } from './canvas.js';
 import { startMagicEffect } from './particles.js';
+import { log } from './logger.js';
 
 let storyboardAnim = null;
 let ltxVideoCallback = null;
@@ -107,28 +108,31 @@ export function getAnimationMode() {
 }
 
 export async function startVideoFallback(basePrompt) {
+  log('video', 'startVideoFallback (LTX)');
   const mode = getAnimationMode();
 
   setVideoStatus(mode === 'faithful'
-    ? 'Animating your drawing...'
-    : 'Creating cinematic animation...');
+    ? 'Animating your drawing with LTX…'
+    : 'Creating cinematic animation with LTX…');
 
   const animPrompt = await getAnimationPrompt(basePrompt, mode);
   const prompt = animPrompt || basePrompt + ', smooth cinematic animation';
 
-  setVideoStatus('Generating video (~30-60s)...');
+  setVideoStatus('Generating video via LTX (~30-60s)…');
+  log('video', 'submitting to LTX', { mode, promptLen: prompt.length });
 
   try {
     const canvasB64 = mode === 'faithful' ? getCanvasBase64() : null;
     const blobUrl = await generateLtxVideo(prompt, canvasB64, mode);
+    log('video', 'LTX returned blob');
     showVideo(blobUrl);
     setVideoStatus('Video ready!', 'done');
   } catch (e) {
-    console.error('Video generation error:', e);
-    if (e.message?.includes('quota')) {
-      setVideoStatus('Free GPU quota reached — try again in a few minutes', 'error');
+    log('video', 'LTX failed', { error: e.message.slice(0, 200) });
+    if (e.message?.includes('quota') || e.message?.includes('exceeded')) {
+      setVideoStatus('Free GPU quota reached — using magic effect instead', 'error');
     } else {
-      setVideoStatus('Video generation failed — enjoy the magic effect!', 'error');
+      setVideoStatus('Video unavailable — using magic effect instead', 'error');
     }
     startMagicEffect();
   }

@@ -255,10 +255,12 @@ async function startGeneration(subject) {
 }
 
 async function startVideoForChat(prompt, subject) {
+  log('flow', 'starting video generation', { subject });
   let done = false;
   const onVideo = (videoSrc) => {
     if (done) return;
     done = true;
+    log('ai', 'video ready');
     removeLoading();
     appendMessage({ role: 'ai', type: 'video', content: videoSrc, caption: 'Wow! Your ' + subject + ' is alive! 🌟' });
     finishChat(subject);
@@ -266,16 +268,22 @@ async function startVideoForChat(prompt, subject) {
 
   try {
     await startVeoGeneration(prompt, null, onVideo);
+    log('flow', 'startVeoGeneration returned');
   } catch (e) {
-    console.error('Video gen error:', e);
+    log('error', 'video gen exception', { error: e.message });
   }
 
-  // Veo/poll finished (or errored). If callback hasn't fired yet, LTX fallback
-  // may still be running. Don't block -- just wait a bit then finish gracefully.
+  // If video didn't arrive in 30s after Veo returns, give up gracefully
   if (!done) {
     setTimeout(() => {
-      if (!done) { done = true; removeLoading(); finishChat(subject); }
-    }, 120000);
+      if (!done) {
+        done = true;
+        log('flow', 'video timeout, finishing without video');
+        removeLoading();
+        appendMessage({ role: 'ai', type: 'text', content: 'Couldn\'t make a video this time — all the video AIs are busy. But look at your beautiful picture! 🎨' });
+        finishChat(subject);
+      }
+    }, 30000);
   }
 }
 

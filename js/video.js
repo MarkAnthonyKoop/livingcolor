@@ -11,6 +11,7 @@ import {
   setVideoStatus, stopStoryboard,
   startVideoFallback, setLtxVideoCallback,
 } from './storyboard.js';
+import { log } from './logger.js';
 
 export { setVideoStatus };
 
@@ -112,8 +113,9 @@ async function pollVeoOperation(opName, key, controller) {
 }
 
 export async function startVeoGeneration(prompt, imgEl, chatCallback) {
+  log('video', 'startVeoGeneration called');
   const key = getApiKey();
-  if (!key) return;
+  if (!key) { log('video', 'no api key, skipping Veo'); startVideoFallback(prompt); return; }
 
   if (chatCallback) {
     onVideoReady = chatCallback;
@@ -125,7 +127,8 @@ export async function startVeoGeneration(prompt, imgEl, chatCallback) {
   const controller = new AbortController();
   setVeoAbort(controller);
 
-  setVideoStatus('Submitting video generation...');
+  setVideoStatus('Trying Veo 3.1 (Gemini video AI)...');
+  log('video', 'submitting to Veo');
 
   try {
     const imgB64 = getCanvasBase64();
@@ -151,14 +154,17 @@ export async function startVeoGeneration(prompt, imgEl, chatCallback) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const errMsg = body?.error?.message || 'HTTP ' + res.status;
+      log('video', 'Veo failed', { status: res.status, error: errMsg.slice(0, 100) });
       if (res.status === 429) {
-        setVideoStatus('Veo quota reached -- trying free LTX Video...');
+        setVideoStatus('Veo rate limited — trying free LTX Video...');
         startVideoFallback(prompt);
         return;
       } else if (res.status === 401 || res.status === 403) {
-        setVideoStatus('API key lacks Veo access', 'error');
+        setVideoStatus('Veo unavailable — trying free LTX Video...');
+        startVideoFallback(prompt);
       } else {
-        setVideoStatus('Video error: ' + errMsg, 'error');
+        setVideoStatus('Veo error — trying free LTX Video...');
+        startVideoFallback(prompt);
       }
       return;
     }
