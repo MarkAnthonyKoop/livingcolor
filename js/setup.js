@@ -77,7 +77,16 @@ export function setupApiKey() {
 
   document.getElementById('settings-btn').addEventListener('click', () => {
     showSetup(getApiKey());
+    const t = document.getElementById('use-backend-toggle');
+    if (t) t.checked = localStorage.getItem('use_backend') === 'true';
   });
+
+  const backendToggle = document.getElementById('use-backend-toggle');
+  if (backendToggle) {
+    backendToggle.addEventListener('change', (e) => {
+      localStorage.setItem('use_backend', e.target.checked ? 'true' : 'false');
+    });
+  }
 
   // Allow closing overlay by clicking backdrop (only if key already saved)
   document.getElementById('setup-overlay').addEventListener('click', (e) => {

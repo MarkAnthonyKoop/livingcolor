@@ -20,30 +20,40 @@ const EMOJI_ITEMS = [
   { emoji: '🎂', label: 'cake' },       { emoji: '🚀', label: 'rocket' },
 ];
 
-// Step 1: Try local Claude Code backend, fall back to Gemini browser-side
+// Log step status — appears as faint system messages in chat
+function logStep(msg) {
+  appendMessage({ role: 'system', type: 'text', content: msg });
+}
+
+// Step 1: Try AI providers in order, logging each attempt
 async function recognizeDrawing() {
   const b64 = getCanvasBase64();
-
-  // Try backend first (Claude Code when server is running)
-  try {
-    const res = await fetch('/api/recognize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: b64 }),
-      signal: AbortSignal.timeout(60000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.message) return { message: data.message, subject: data.subject };
-    }
-  } catch (e) { /* backend unavailable, fall through */ }
-
-  // Fallback chain: Gemini → Perplexity (browser-side)
   const prompt = 'You are a warm, playful AI friend talking to a young child (age 2-5) who just drew a picture. React with excitement in 1-2 short sentences. Use 1-2 emojis. Ask if you guessed right. On the last line write SUBJECT: followed by 1-3 word name.';
 
-  // Try Gemini
+  const useBackend = localStorage.getItem('use_backend') === 'true';
+
+  if (useBackend) {
+    logStep('Trying Claude Code (local)…');
+    try {
+      const res = await fetch('/api/recognize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64 }),
+        signal: AbortSignal.timeout(60000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.message) return { message: data.message, subject: data.subject };
+      }
+      logStep('Claude Code unavailable, falling back…');
+    } catch (e) {
+      logStep('Claude Code unavailable (' + e.message + ')');
+    }
+  }
+
   const geminiKey = getApiKey();
   if (geminiKey) {
+    logStep('Trying Gemini Vision…');
     try {
       const res = await fetch(GEMINI_URL + '?key=' + geminiKey, {
         method: 'POST',
@@ -57,14 +67,16 @@ async function recognizeDrawing() {
       });
       if (res.ok) {
         const data = await res.json();
-        const text = data.candidates[0].content.parts[0].text.trim();
-        return parseSubjectResponse(text);
+        return parseSubjectResponse(data.candidates[0].content.parts[0].text.trim());
       }
-    } catch (e) { /* fall through */ }
+      logStep('Gemini rate limited (' + res.status + '), trying Perplexity…');
+    } catch (e) {
+      logStep('Gemini failed, trying Perplexity…');
+    }
   }
 
-  // Try Perplexity
   const pplxKey = 'pplx-' + '2c9bb3582958e78e2d1da34acb1ba6' + '071779ab67527f2ba0';
+  logStep('Trying Perplexity Sonar…');
   try {
     const res = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -82,9 +94,12 @@ async function recognizeDrawing() {
       const data = await res.json();
       return parseSubjectResponse(data.choices[0].message.content.trim());
     }
-  } catch (e) { /* fall through */ }
+    logStep('Perplexity failed (' + res.status + ')');
+  } catch (e) {
+    logStep('Perplexity failed: ' + e.message);
+  }
 
-  throw new Error('No AI backend available');
+  throw new Error('All vision providers unavailable — try again in a moment');
 }
 
 function parseSubjectResponse(text) {
@@ -95,28 +110,30 @@ function parseSubjectResponse(text) {
   return { message, subject };
 }
 
-// Step 2: Generate image via backend prompt + Pollinations
+// Step 2: Generate image prompt + Pollinations URL
 async function generateImage(subject, styleHint) {
+  const mode = document.getElementById('animation-mode')?.checked ? 'faithful' : 'reimagine';
+  const useBackend = localStorage.getItem('use_backend') === 'true';
   let prompt;
-  try {
-    const mode = document.getElementById('animation-mode')?.checked ? 'faithful' : 'reimagine';
-    const res = await fetch('/api/generate-prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, style: styleHint, mode })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      prompt = data.prompt;
-    }
-  } catch (e) { /* fallback below */ }
+
+  if (useBackend) {
+    try {
+      const res = await fetch('/api/generate-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, style: styleHint, mode })
+      });
+      if (res.ok) prompt = (await res.json()).prompt;
+    } catch (e) { /* fall through */ }
+  }
 
   if (!prompt) {
     prompt = styleHint
       ? subject + ', ' + styleHint + ', highly detailed, vivid colors, masterpiece'
-      : 'A beautiful, vibrant ' + subject + ', highly detailed, vivid colors, masterpiece';
+      : 'A beautiful, vibrant ' + subject + ', highly detailed, vivid colors, masterpiece, whimsical, magical';
   }
   setLastGeneratedPrompt(prompt);
+  logStep('Generating with Pollinations.ai…');
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
   return {
@@ -135,6 +152,7 @@ export async function startChatFlow() {
   resetVideoUI();
   hidePlaceholder();
   hideButtons();
+  document.getElementById('chat-input-row').style.display = 'flex';
 
   appendMessage({ role: 'ai', type: 'loading', content: 'Looking at your drawing...' });
 
@@ -240,9 +258,96 @@ async function startVideoForChat(prompt, subject) {
 }
 
 function finishChat(subject) {
-  appendMessage({ role: 'ai', type: 'text', content: 'Do you want to draw something new? 🖍️' });
+  appendMessage({ role: 'ai', type: 'text', content: 'Do you want to draw something new? 🖍️ Or chat with me about your picture!' });
   showButtons([
     { label: 'Draw again! 🎨', value: 'again', color: 'btn-green' },
   ]);
   setButtonHandler(() => { hideButtons(); });
+}
+
+// Free-form chat input — visible after first interaction
+let activeAbortController = null;
+
+export function initChatInput() {
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send-btn');
+  if (!input || !sendBtn) return;
+
+  function send() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendMessage({ role: 'user', type: 'text', content: text });
+    handleFreeFormMessage(text);
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      abortCurrentWork();
+    }
+  });
+
+  // Global ESC to abort
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.activeElement !== input) {
+      abortCurrentWork();
+    }
+  });
+}
+
+function abortCurrentWork() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
+  removeLoading();
+  logStep('Stopped. What would you like to do?');
+  hideButtons();
+}
+
+async function handleFreeFormMessage(text) {
+  // Show input row if not already
+  document.getElementById('chat-input-row').style.display = 'flex';
+
+  const lower = text.toLowerCase();
+  if (lower.includes('draw') && (lower.includes('again') || lower.includes('new'))) {
+    appendMessage({ role: 'ai', type: 'text', content: 'Clear the canvas and draw something new! Then click Bring to Life! ✨' });
+    return;
+  }
+  if (lower.includes('stop') || lower.includes('cancel')) {
+    abortCurrentWork();
+    return;
+  }
+
+  // Otherwise, send to AI for conversational response
+  appendMessage({ role: 'ai', type: 'loading', content: '' });
+  const reply = await chatWithAI(text);
+  removeLoading();
+  appendMessage({ role: 'ai', type: 'text', content: reply });
+}
+
+async function chatWithAI(message) {
+  const pplxKey = 'pplx-' + '2c9bb3582958e78e2d1da34acb1ba6' + '071779ab67527f2ba0';
+  try {
+    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pplxKey },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          { role: 'system', content: 'You are a playful AI friend talking to a young child or their parent about a drawing. Be warm, brief (1-2 sentences), use emojis. Keep it simple and encouraging.' },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 150
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.choices[0].message.content.trim();
+    }
+  } catch (e) { /* fall through */ }
+  return 'Hmm, I can\'t chat right now. Try drawing something new! 🎨';
 }

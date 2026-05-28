@@ -136,6 +136,21 @@ header {
   min-height: 1.2em;
 }
 
+.backend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.backend-toggle input {
+  margin: 0;
+}
+
 h1 {
   font-size: 1.8rem;
   font-weight: 700;
@@ -651,6 +666,55 @@ footer a:hover { text-decoration: underline; }
   color: #fff;
   border-bottom-right-radius: 4px;
 }
+
+.chat-system {
+  align-self: center;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-family: monospace;
+  padding: 0.25rem 0.5rem;
+  font-style: italic;
+  max-width: 100%;
+  opacity: 0.7;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.chat-input-row input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.chat-input-row input:focus {
+  border-color: var(--accent);
+}
+
+.chat-send-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chat-send-btn:hover { background: var(--accent-hover); }
 
 .chat-image {
   width: 100%;

@@ -6,6 +6,7 @@ import { setupColors, setupTools, setupSuggestions } from './colors.js';
 import { setupGenerate } from './generate.js';
 import { setupApiKey } from './setup.js';
 import { initChatUI } from './chat.js';
+import { initChatInput } from './chat-flow.js';
 
 function init() {
   const canvas = document.getElementById('drawing-canvas');
@@ -24,6 +25,7 @@ function init() {
   setupKeyboard();
   setupSuggestions();
   initChatUI();
+  initChatInput();
 
   saveState();
 }
