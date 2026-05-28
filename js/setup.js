@@ -79,12 +79,23 @@ export function setupApiKey() {
     showSetup(getApiKey());
     const t = document.getElementById('use-backend-toggle');
     if (t) t.checked = localStorage.getItem('use_backend') === 'true';
+    const vt = document.getElementById('voice-toggle');
+    if (vt) vt.checked = localStorage.getItem('voice_off') !== 'true';
   });
 
   const backendToggle = document.getElementById('use-backend-toggle');
   if (backendToggle) {
     backendToggle.addEventListener('change', (e) => {
       localStorage.setItem('use_backend', e.target.checked ? 'true' : 'false');
+    });
+  }
+
+  const voiceToggle = document.getElementById('voice-toggle');
+  if (voiceToggle) {
+    voiceToggle.checked = localStorage.getItem('voice_off') !== 'true';
+    voiceToggle.addEventListener('change', (e) => {
+      if (e.target.checked) localStorage.removeItem('voice_off');
+      else localStorage.setItem('voice_off', 'true');
     });
   }
 

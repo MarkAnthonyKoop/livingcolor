@@ -851,13 +851,50 @@ footer a:hover { text-decoration: underline; }
 
 .chat-send-btn:hover { background: var(--accent-hover); }
 
+/* Prevent canvas from triggering browser scroll/zoom on touch */
+#drawing-canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  body { padding: 0; }
+  header { padding: 0.75rem 0.5rem 0.25rem; }
+  h1 { font-size: 1.4rem; }
+  .tagline { font-size: 0.8rem; }
+  main { padding: 0.5rem; }
+
   .workspace {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
-  .canvas-container { min-height: 300px; }
-  .result-panel { min-height: 300px; }
-  .prompt-row { flex-direction: column; }
+  .canvas-container { min-height: 280px; }
+  .result-panel { min-height: 280px; }
+
+  /* Bigger touch targets */
+  .tool-btn, .settings-btn { width: 44px; height: 44px; }
+  .swatch { width: 44px; height: 44px; }
+  .suggestion { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
+  .pattern-btn { padding: 0.4rem 0.8rem; font-size: 0.85rem; min-height: 36px; }
+  #brush-size { width: 100px; height: 24px; }
+
+  .prompt-row { flex-direction: column; gap: 0.4rem; }
+  #style-prompt { font-size: 1rem; padding: 0.8rem; }
+  .generate-btn { padding: 0.9rem 1.2rem; font-size: 1.1rem; width: 100%; }
+
   .emoji-grid { grid-template-columns: repeat(4, 1fr); }
+  .emoji-btn { min-height: 64px; font-size: 2rem; }
+
+  .chat-response-btn { min-height: 56px; font-size: 1.05rem; padding: 0.8rem 1rem; }
+
+  .chat-input-row input { font-size: 1rem; min-height: 44px; }
+  .chat-send-btn { min-width: 44px; min-height: 44px; }
+}
+
+@media (max-width: 480px) {
+  .color-swatches { gap: 6px; }
+  .swatch { width: 28px; height: 28px; }
+  .toolbar { padding: 0.4rem 0.5rem; gap: 0.4rem; }
 }

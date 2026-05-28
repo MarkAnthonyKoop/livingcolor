@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LivingColor — Draw It, Watch It Come Alive!</title>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
@@ -20,6 +20,10 @@
       <label class="backend-toggle">
         <input type="checkbox" id="use-backend-toggle">
         <span>Use local Claude Code backend (advanced)</span>
+      </label>
+      <label class="backend-toggle">
+        <input type="checkbox" id="voice-toggle">
+        <span>AI voice (reads chat aloud) 🔊</span>
       </label>
       <button id="download-log-btn" class="action-btn secondary" style="margin-top:0.75rem;width:100%">Download conversation log</button>
     </div>

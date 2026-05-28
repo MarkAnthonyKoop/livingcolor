@@ -1,6 +1,7 @@
 // Chat panel UI: rendering messages, scrolling, button creation.
 
 import { getChatMessages, addChatMessage } from './state.js';
+import { speak } from './voice.js';
 
 let chatContainer = null;
 let chatButtons = null;
@@ -19,6 +20,10 @@ export function appendMessage(msg) {
   addChatMessage(msg);
   renderMessage(msg);
   scrollToBottom();
+  // Speak AI text messages (not system logs, not loading bubbles, not user echoes)
+  if (msg.role === 'ai' && msg.type === 'text' && msg.content) {
+    speak(msg.content);
+  }
 }
 
 function renderMessage(msg) {

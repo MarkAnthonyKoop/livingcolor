@@ -14,6 +14,8 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 
 CLAUDE_CMD = os.environ.get('CLAUDE_CMD', 'claude')
+ELEVENLABS_KEY = os.environ.get('ELEVENLABS_API_KEY', 'sk_adb35ecedf556cdc84feed2b7ecedcaf70d6c108e9d7cccb')
+ELEVENLABS_VOICE = os.environ.get('ELEVENLABS_VOICE_ID', 'FGY2WhTYpPnrIDTdsKH5')  # Laura
 
 # --- Drawing archive: configurable storage location ---
 CONFIG_DIR = Path.home() / '.livingcolor'
@@ -178,6 +180,34 @@ def animate_prompt():
                   f'delighted. Output ONLY the prompt, nothing else.')
     try:
         return jsonify({'prompt': claude(prompt)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/speak', methods=['POST'])
+def speak():
+    """Text → MP3 audio via ElevenLabs."""
+    text = (request.json or {}).get('text', '').strip()
+    if not text:
+        return jsonify({'error': 'no text'}), 400
+    # Strip emoji-heavy text to under 250 chars for cost control
+    text = text[:250]
+    try:
+        payload = json.dumps({
+            'text': text,
+            'model_id': 'eleven_flash_v2_5',
+            'voice_settings': {'stability': 0.5, 'similarity_boost': 0.75}
+        }).encode()
+        req = urllib.request.Request(
+            f'https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE}',
+            data=payload,
+            headers={'xi-api-key': ELEVENLABS_KEY, 'Content-Type': 'application/json'}
+        )
+        audio = urllib.request.urlopen(req, timeout=15).read()
+        from flask import Response
+        return Response(audio, mimetype='audio/mpeg')
+    except urllib.error.HTTPError as e:
+        return jsonify({'error': f'ElevenLabs HTTP {e.code}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
