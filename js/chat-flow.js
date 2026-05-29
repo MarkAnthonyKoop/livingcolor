@@ -10,6 +10,7 @@ import {
 } from './chat.js';
 import { log } from './logger.js';
 import { makeAlive, stopLiving } from './living.js';
+import { animateRegions, stopRegionAnimation } from './regions.js';
 
 const EMOJI_ITEMS = [
   { emoji: '🦋', label: 'butterfly' }, { emoji: '🐱', label: 'cat' },
@@ -230,6 +231,7 @@ function handleSubjectPicked(subject, display) {
 async function startGeneration(subject) {
   hideButtons();
   stopLiving();
+  stopRegionAnimation();
   appendMessage({ role: 'ai', type: 'loading', content: 'I\'m painting your ' + subject + '... 🎨' });
 
   const styleHint = document.getElementById('style-prompt').value.trim();
@@ -325,10 +327,36 @@ async function applyLivingToLastImage() {
   const imgs = document.querySelectorAll('.chat-bubble img');
   if (imgs.length === 0) return;
   const lastImg = imgs[imgs.length - 1];
+  const useBackend = localStorage.getItem('use_backend') === 'true';
 
-  // Try to get a Claude-designed motion plan when backend is available
+  // When backend is available, try per-region motion first (real animation)
+  if (useBackend && lastImg.src) {
+    try {
+      const res = await fetch('/api/region-motion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: lastImg.src,
+          subject: window._lcSubject || 'object',
+        }),
+        signal: AbortSignal.timeout(60000),
+      });
+      if (res.ok) {
+        const plan = await res.json();
+        log('regions', 'plan received', { count: plan.regions?.length });
+        const apply = () => animateRegions(lastImg, plan);
+        if (lastImg.complete) apply();
+        else lastImg.addEventListener('load', apply, { once: true });
+        return;
+      }
+    } catch (e) {
+      log('regions', 'region-motion failed, falling back to whole-image plan', { error: e.message });
+    }
+  }
+
+  // Fallback: whole-image motion plan
   let plan = null;
-  if (localStorage.getItem('use_backend') === 'true') {
+  if (useBackend) {
     try {
       const info = window._lcDrawingInfo || {};
       const res = await fetch('/api/motion-plan', {

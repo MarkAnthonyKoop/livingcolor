@@ -212,6 +212,64 @@ def speak():
         return jsonify({'error': str(e)}), 500
 
 
+REGION_PROMPT_TEMPLATE = (
+    'Look at this AI-generated image of a {subject} and identify 2-5 animatable regions. '
+    'Examples: a butterfly has left_wing, right_wing, body. A cat has head, body, tail. '
+    'A tree has trunk, leaves. A person has head, torso, left_arm, right_arm.\n\n'
+    'For each region, give:\n'
+    '- name (snake_case)\n'
+    '- bbox as [x, y, w, h] in fractions of image (0-1), x/y is top-left corner\n'
+    '- anchor (where the region pivots from): "center", "top", "bottom", "left", "right", '
+    '"top-left", "top-right", "bottom-left", "bottom-right"\n'
+    '- motions: array of {{type, axis (for translate), amplitude, period_ms, easing}}\n'
+    '  - type: "translate" | "rotate" | "scale"\n'
+    '  - axis: "x" | "y" (only for translate)\n'
+    '  - amplitude: translate in pixels, rotate in degrees, scale as fraction\n'
+    '  - period_ms: oscillation period (full cycle)\n'
+    '  - easing: "sine" | "linear" | "ease"\n\n'
+    'Pick motions that match the subject — wings flap fast (period 300-500ms, amplitude 15-30deg), '
+    'tail wags slowly (1000-1500ms), bodies breathe (2000ms, amplitude 5px), leaves rustle (800ms). '
+    'All motions oscillate around 0. Don\'t exceed 30deg rotation or 20px translation.\n\n'
+    'Output ONLY a JSON object like: {{"regions": [{{"name": "...", "bbox": [..], "anchor": "...", "motions": [...]}}]}}\n'
+    'No markdown, no commentary.'
+)
+
+
+@app.route('/api/region-motion', methods=['POST'])
+def region_motion():
+    """Ask Claude to segment the AI image into animatable regions + motion vectors."""
+    data = request.json
+    image_url = data.get('image_url', '')
+    subject = data.get('subject', 'object')
+
+    if not image_url:
+        return jsonify({'error': 'missing image_url'}), 400
+
+    # Download the image (Pollinations rejects Referer header)
+    try:
+        req = urllib.request.Request(image_url, headers={'User-Agent': 'curl/8'})
+        img_bytes = urllib.request.urlopen(req, timeout=60).read()
+        img_b64 = base64.b64encode(img_bytes).decode()
+    except Exception as e:
+        return jsonify({'error': f'image download failed: {e}'}), 500
+
+    try:
+        text = claude(REGION_PROMPT_TEMPLATE.format(subject=subject), img_b64)
+        # Strip markdown if Claude added it
+        text = text.strip()
+        if text.startswith('```'):
+            text = text.split('\n', 1)[1] if '\n' in text else text
+            if text.endswith('```'):
+                text = text.rsplit('\n', 1)[0]
+            text = text.strip()
+        plan = json.loads(text)
+        return jsonify(plan)
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'invalid JSON from Claude: {e}', 'raw': text[:500]}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/motion-plan', methods=['POST'])
 def motion_plan():
     """Ask Claude Code to design a motion vector plan for the AI image."""
