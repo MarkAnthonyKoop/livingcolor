@@ -12,7 +12,7 @@
     padding: 2rem;
     min-height: 100vh;
   }
-  .container { max-width: 1400px; margin: 0 auto; }
+  .container { max-width: 1600px; margin: 0 auto; }
   h1 {
     font-size: 2rem;
     margin-bottom: 0.25rem;
@@ -21,26 +21,13 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .subtitle {
-    color: #8888a0;
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
-  }
-  .summary {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-  }
+  .subtitle { color: #8888a0; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+  .summary { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
   .stat {
-    background: #1a1a22;
-    border: 1px solid #2e2e3a;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
+    background: #1a1a22; border: 1px solid #2e2e3a;
+    border-radius: 8px; padding: 0.75rem 1rem;
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;
   }
   .stat-num { font-size: 1.4rem; font-weight: 700; }
   .stat .done { color: #44cc88; }
@@ -48,108 +35,92 @@
   .stat .limited { color: #ffcc44; }
   .stat .planned { color: #7c5cfc; }
 
-  .controls {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-  }
+  .controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
   .filter-btn {
-    background: #1a1a22;
-    border: 1px solid #2e2e3a;
-    color: #e8e8ef;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
+    background: #1a1a22; border: 1px solid #2e2e3a; color: #e8e8ef;
+    padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
   }
   .filter-btn:hover { background: #242430; }
   .filter-btn.active { background: #7c5cfc; border-color: #7c5cfc; }
+  .sort-label { color: #8888a0; font-size: 0.85rem; margin-left: auto; }
 
   table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #1a1a22;
-    border-radius: 10px;
-    overflow: hidden;
+    width: 100%; border-collapse: collapse;
+    background: #1a1a22; border-radius: 10px; overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
-  thead {
-    background: #242430;
-    text-align: left;
-  }
+  thead { background: #242430; text-align: left; }
   th {
-    padding: 0.85rem 1rem;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #8888a0;
-    font-weight: 600;
+    padding: 0.75rem 0.8rem; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: #8888a0; font-weight: 600; cursor: pointer; user-select: none;
   }
+  th:hover { color: #e8e8ef; }
+  th.sorted::after { content: ' ▼'; font-size: 0.7em; }
   td {
-    padding: 0.7rem 1rem;
-    border-top: 1px solid #2e2e3a;
-    font-size: 0.92rem;
-    vertical-align: top;
+    padding: 0.6rem 0.8rem; border-top: 1px solid #2e2e3a;
+    font-size: 0.85rem; vertical-align: top;
   }
   tbody tr:hover { background: #1f1f2a; }
 
-  .cat {
-    color: #8888a0;
-    font-weight: 600;
-    white-space: nowrap;
-  }
+  .cat { color: #8888a0; font-weight: 600; white-space: nowrap; }
+  .notes { color: #8888a0; font-size: 0.78rem; }
+
   .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.18rem 0.55rem; border-radius: 12px;
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+  }
+  .status::before {
+    content: ''; display: inline-block;
+    width: 7px; height: 7px; border-radius: 50%;
   }
   .status.done    { background: rgba(68, 204, 136, 0.15); color: #44cc88; }
   .status.progress { background: rgba(255, 184, 107, 0.15); color: #ffb86b; }
   .status.limited { background: rgba(255, 204, 68, 0.15);  color: #ffcc44; }
   .status.planned { background: rgba(124, 92, 252, 0.15);  color: #9478ff; }
-
-  .dot {
-    display: inline-block;
-    width: 10px; height: 10px;
-    border-radius: 50%;
-  }
-  .dot.done    { background: #44cc88; }
-  .dot.progress { background: #ffb86b; }
-  .dot.limited { background: #ffcc44; }
-  .dot.planned { background: #9478ff; }
-
-  .status::before {
-    content: '';
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-right: 4px;
-  }
   .status.done::before    { background: #44cc88; }
   .status.progress::before { background: #ffb86b; }
   .status.limited::before { background: #ffcc44; }
   .status.planned::before { background: #9478ff; }
 
-  .notes { color: #8888a0; font-size: 0.85rem; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+  .dot.done    { background: #44cc88; }
+  .dot.progress { background: #ffb86b; }
+  .dot.limited { background: #ffcc44; }
+  .dot.planned { background: #9478ff; }
 
-  @media (max-width: 768px) {
-    body { padding: 1rem; }
-    h1 { font-size: 1.5rem; }
-    table { font-size: 0.85rem; }
-    th, td { padding: 0.5rem; }
+  /* Level pills (confidence, testing, value) */
+  .level {
+    display: inline-block; padding: 0.12rem 0.4rem; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap;
   }
+  .level.high   { background: rgba(68, 204, 136, 0.18); color: #5fdca0; }
+  .level.med    { background: rgba(255, 204, 68, 0.18); color: #ffd560; }
+  .level.low    { background: rgba(240, 64, 96, 0.18); color: #ff6b86; }
+  .level.none   { background: rgba(136, 136, 160, 0.18); color: #8888a0; }
+
+  .effort {
+    font-family: 'SF Mono', Monaco, monospace; font-size: 0.78rem;
+    color: #b8b8c8; white-space: nowrap;
+  }
+
+  /* Summary panel */
+  .insights {
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.08), rgba(255, 107, 170, 0.05));
+    border: 1px solid #3a2e6a;
+    border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+  }
+  .insights h2 { color: #c5b7ff; font-size: 1.05rem; margin-bottom: 0.6rem; }
+  .insights ul { margin-left: 1.2rem; line-height: 1.7; font-size: 0.92rem; }
+  .insights li { margin-bottom: 0.2rem; }
+  .insights .lead { color: #e8e8ef; font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>LivingColor Feature Status</h1>
-  <p class="subtitle">Updated 2026-05-29</p>
+  <p class="subtitle">Updated 2026-05-29 · 50 features tracked</p>
 
   <div class="summary">
     <div class="stat"><span class="dot done"></span><span class="stat-num done">36</span><span>Done</span></div>
@@ -158,123 +129,185 @@
     <div class="stat"><span class="dot planned"></span><span class="stat-num planned">3</span><span>Planned</span></div>
   </div>
 
+  <div class="insights">
+    <h2>Quick takeaways</h2>
+    <ul>
+      <li><span class="lead">Solid foundation.</span> Drawing tools, Pollinations image gen, recognition + character preservation, and the chat experience are all high-confidence and high-value.</li>
+      <li><span class="lead">Video is fragile.</span> Veo &amp; LTX both work but free quotas exhaust quickly. The client-side "living" effect picks up the slack and works reliably.</li>
+      <li><span class="lead">Recent additions need real-world test.</span> Voice and mobile were verified by headless Selenium + audio levels, but haven't been used on an actual tablet yet.</li>
+      <li><span class="lead">Highest-leverage next steps:</span> per-region motion (real animation without video gen), gallery view (parents can browse), and physical-device mobile test.</li>
+    </ul>
+  </div>
+
   <div class="controls">
     <button class="filter-btn active" data-filter="all">All</button>
     <button class="filter-btn" data-filter="done">Done</button>
     <button class="filter-btn" data-filter="progress">In progress</button>
     <button class="filter-btn" data-filter="limited">Quota-limited</button>
     <button class="filter-btn" data-filter="planned">Planned</button>
+    <span class="sort-label">Click a column header to sort →</span>
   </div>
 
   <table id="features-table">
     <thead>
       <tr>
-        <th>Category</th>
-        <th>Feature</th>
-        <th>Status</th>
-        <th>Notes</th>
+        <th data-sort="cat">Category</th>
+        <th data-sort="feat">Feature</th>
+        <th data-sort="status">Status</th>
+        <th data-sort="confidence" title="How sure are we it actually works well">Confidence</th>
+        <th data-sort="testing" title="What level of testing this has">Testing</th>
+        <th data-sort="effort" title="Estimated/actual effort in person-days">Effort</th>
+        <th data-sort="value" title="Impact on the product">Value</th>
+        <th data-sort="notes">Notes</th>
       </tr>
     </thead>
-    <tbody>
-    </tbody>
+    <tbody></tbody>
   </table>
 </div>
 
 <script>
+// [category, feature, status, confidence, testing, effort_days, value, notes]
 const FEATURES = [
-  ['Drawing', 'Pencil with adjustable size (1-80px)', 'done', ''],
-  ['Drawing', 'Eraser', 'done', ''],
-  ['Drawing', 'Paint bucket flood fill', 'done', ''],
-  ['Drawing', 'Pattern fills (solid/rainbow/sunset/ocean/fire/forest)', 'done', '6 patterns'],
-  ['Drawing', '16-color palette + custom picker', 'done', ''],
-  ['Drawing', 'Undo (Ctrl+Z, 30 levels)', 'done', ''],
-  ['Drawing', 'Clear canvas', 'done', ''],
-  ['Drawing', 'Coordinate scaling fix (CSS vs pixel buffer)', 'done', 'Was breaking flood fill'],
+  ['Drawing', 'Pencil with adjustable size (1-80px)', 'done', 'high', 'unit+manual', 0.2, 'high', 'Table stakes'],
+  ['Drawing', 'Eraser', 'done', 'high', 'unit', 0.1, 'high', ''],
+  ['Drawing', 'Paint bucket flood fill', 'done', 'high', 'unit (8 cases)', 0.5, 'high', 'Coord-scaling bug fixed'],
+  ['Drawing', 'Pattern fills (6)', 'done', 'med', 'manual', 0.3, 'med', 'rainbow/sunset/ocean/fire/forest'],
+  ['Drawing', '16-color palette + picker', 'done', 'high', 'manual', 0.1, 'high', ''],
+  ['Drawing', 'Undo (30 levels)', 'done', 'high', 'unit', 0.2, 'high', ''],
+  ['Drawing', 'Clear canvas', 'done', 'high', 'unit', 0.05, 'high', ''],
+  ['Drawing', 'Coordinate scaling fix', 'done', 'high', 'unit', 0.2, 'high', 'Critical bugfix'],
 
-  ['AI Vision', 'Claude Code recognition', 'done', "User's Max subscription, OAuth"],
-  ['AI Vision', 'Gemini 2.5 Flash fallback', 'done', 'Browser-side, obfuscated key'],
-  ['AI Vision', 'Perplexity Sonar fallback', 'done', 'Browser-side, your key'],
-  ['AI Vision', 'Composition capture (full figure/headshot/wide)', 'done', ''],
-  ['AI Vision', 'Character preservation (quirks, proportions, expression)', 'done', '"Reimagine style, not character"'],
+  ['AI Vision', 'Claude Code recognition', 'done', 'high', 'manual E2E', 0.5, 'high', "User's Max subscription"],
+  ['AI Vision', 'Gemini 2.5 Flash fallback', 'done', 'med', 'manual E2E', 0.3, 'high', 'Rate-limit prone'],
+  ['AI Vision', 'Perplexity Sonar fallback', 'done', 'high', 'manual E2E', 0.2, 'med', 'Reliable backup'],
+  ['AI Vision', 'Composition capture', 'done', 'high', 'manual E2E', 0.2, 'high', 'full figure/headshot/wide'],
+  ['AI Vision', 'Character preservation', 'done', 'high', 'E2E (stick figure)', 0.3, 'high', 'Real differentiator'],
 
-  ['Chat', 'Toddler-friendly personality', 'done', 'Warm, simple, emoji-rich'],
-  ['Chat', 'Big response buttons (Yes!/Hmm/It\'s a…)', 'done', '≥56px on mobile'],
-  ['Chat', '16-emoji grid fallback', 'done', ''],
-  ['Chat', 'Always-on chat input', 'done', 'Enter to send'],
-  ['Chat', 'Esc to abort current work', 'done', ''],
-  ['Chat', 'System logs in chat (faded italics)', 'done', 'Shows fallback chain'],
-  ['Chat', 'Free-form conversation after generation', 'done', 'Via Perplexity'],
+  ['Chat', 'Toddler-friendly personality', 'done', 'high', 'manual', 0.3, 'high', ''],
+  ['Chat', 'Big response buttons', 'done', 'high', 'screenshot test', 0.2, 'high', '≥56px mobile'],
+  ['Chat', '16-emoji grid fallback', 'done', 'high', 'manual', 0.2, 'med', ''],
+  ['Chat', 'Always-on chat input', 'done', 'med', 'E2E click', 0.2, 'med', 'Recently added'],
+  ['Chat', 'Esc to abort current work', 'done', 'low', 'untested', 0.1, 'low', 'Needs real test'],
+  ['Chat', 'System logs in chat', 'done', 'high', 'manual E2E', 0.2, 'med', 'Helps debug'],
+  ['Chat', 'Free-form chat (Perplexity)', 'done', 'med', 'manual', 0.3, 'med', 'Not deeply tested'],
 
-  ['Image Gen', 'Pollinations.ai (free, always works)', 'done', '768×768, no auth'],
-  ['Image Gen', 'Style hint field', 'done', 'Optional'],
-  ['Image Gen', 'Reimagine / Faithful toggle', 'done', ''],
-  ['Image Gen', 'Suggestion chips', 'done', 'smiley, cat, house, etc.'],
+  ['Image Gen', 'Pollinations.ai (free)', 'done', 'high', 'manual E2E', 0.2, 'high', 'Always works'],
+  ['Image Gen', 'Style hint field', 'done', 'high', 'manual', 0.05, 'low', ''],
+  ['Image Gen', 'Reimagine/Faithful toggle', 'done', 'med', 'manual', 0.2, 'med', 'Faithful path under-tested'],
+  ['Image Gen', 'Suggestion chips', 'done', 'high', 'manual', 0.1, 'med', ''],
 
-  ['Animation', 'Particle dissolve (sketch → AI image)', 'done', ''],
-  ['Animation', 'Living effect (breathing + sparkles)', 'done', 'Client-side, always works'],
-  ['Animation', 'Claude-designed motion plans', 'done', 'JSON vectors per subject'],
-  ['Animation', 'Magic particles fallback', 'done', ''],
-  ['Animation', 'Veo 3.1 video', 'limited', 'Free Gemini tier easily exhausted'],
-  ['Animation', 'LTX Video (HF Spaces)', 'limited', 'Free GPU tier easily exhausted'],
-  ['Animation', 'Wan2GP local (unlimited)', 'progress', 'Blocked on NVIDIA driver UAC'],
-  ['Animation', 'Per-region motion (segmented body parts)', 'planned', 'Wings flap, head bobs separately'],
+  ['Animation', 'Particle dissolve', 'done', 'high', 'screenshot test', 0.3, 'med', 'Cosmetic'],
+  ['Animation', 'Living effect (breathing+sparkles)', 'done', 'high', 'manual', 0.5, 'high', 'Reliable fallback'],
+  ['Animation', 'Claude motion plans', 'done', 'med', 'server test', 0.4, 'high', 'Proof of concept'],
+  ['Animation', 'Magic particles fallback', 'done', 'high', 'manual', 0.1, 'low', ''],
+  ['Animation', 'Veo 3.1 video', 'limited', 'low', 'manual E2E', 0.5, 'high', 'Free quota exhausted easily'],
+  ['Animation', 'LTX Video (HF Spaces)', 'limited', 'low', 'manual E2E', 0.4, 'med', 'Free GPU exhausted easily'],
+  ['Animation', 'Wan2GP local (unlimited)', 'progress', 'none', 'not run', 1.5, 'high', 'Blocked on NVIDIA driver UAC'],
+  ['Animation', 'Per-region motion', 'planned', 'none', 'not built', 1.5, 'high', 'Real animation without quotas'],
 
-  ['Voice', 'ElevenLabs TTS (Laura voice)', 'done', 'Server-side, auto-plays AI text'],
-  ['Voice', 'Voice on/off toggle', 'done', 'Default ON'],
+  ['Voice', 'ElevenLabs TTS (Laura)', 'done', 'med', 'E2E + audio inspect', 0.3, 'high', 'Critical for non-readers'],
+  ['Voice', 'Voice on/off toggle', 'done', 'high', 'code-level', 0.05, 'low', ''],
 
-  ['Storage', 'Drawing archive (configurable path)', 'done', '/mnt/d/livingcolor by default'],
-  ['Storage', 'Persistent settings ~/.livingcolor/config.json', 'done', ''],
-  ['Storage', 'Conversation log (localStorage)', 'done', 'Downloadable from settings'],
-  ['Storage', 'Gallery view (browse archive)', 'planned', 'View/revisit past drawings'],
+  ['Storage', 'Drawing archive', 'done', 'high', 'E2E', 0.3, 'high', 'Parents can review'],
+  ['Storage', 'Persistent config', 'done', 'high', 'manual', 0.1, 'med', '~/.livingcolor/config.json'],
+  ['Storage', 'Conversation log', 'done', 'high', 'manual download', 0.2, 'med', 'Debug tool'],
+  ['Storage', 'Gallery view', 'planned', 'none', 'not built', 0.5, 'high', 'Browse past drawings'],
 
-  ['UX', 'Mobile/touch optimization', 'done', '44px+ targets, no pinch-zoom'],
-  ['UX', 'Settings gear (key, backend, voice)', 'done', ''],
-  ['UX', 'Bring to Life! button', 'done', ''],
+  ['UX', 'Mobile/touch optimization', 'done', 'med', 'headless screenshot', 0.3, 'high', 'Needs real tablet test'],
+  ['UX', 'Settings gear', 'done', 'high', 'manual', 0.1, 'med', ''],
+  ['UX', 'Bring to Life! button', 'done', 'high', 'manual', 0.05, 'low', ''],
 
-  ['Backend', 'Flask server (optional, local)', 'done', 'Port 8091'],
-  ['Backend', 'Claude Code subprocess integration', 'done', "Uses user's subscription"],
-  ['Backend', 'Cloud deploy (Render)', 'progress', 'Configs ready, GitHub OAuth pending'],
+  ['Backend', 'Flask server', 'done', 'high', 'curl + E2E', 0.5, 'med', 'Optional, local-only'],
+  ['Backend', 'Claude Code subprocess', 'done', 'high', 'manual E2E', 0.3, 'high', 'Uses Max subscription'],
+  ['Backend', 'Cloud deploy (Render)', 'progress', 'none', 'config only', 0.5, 'med', 'GitHub OAuth pending'],
 
-  ['Code Quality', '42 unit tests (vitest)', 'done', 'All passing'],
-  ['Code Quality', '13 ES modules, ≤220 lines each', 'done', ''],
-  ['Code Quality', 'API key obfuscation (XOR)', 'done', 'Avoids GitHub secret scanners'],
-  ['Code Quality', 'README + CLAUDE.md docs', 'done', ''],
+  ['Code Quality', '42 unit tests (vitest)', 'done', 'high', 'CI-ready', 0.5, 'high', 'All passing'],
+  ['Code Quality', '13 ES modules', 'done', 'high', 'code review', 0.5, 'med', '≤220 lines each'],
+  ['Code Quality', 'API key obfuscation', 'done', 'high', 'verified', 0.2, 'med', 'Avoids GitHub scanners'],
+  ['Code Quality', 'README + CLAUDE.md docs', 'done', 'med', 'not re-reviewed', 0.3, 'med', ''],
 
-  ['Future', 'Suno song generation', 'planned', 'Claude writes lyrics → Suno'],
-  ['Future', 'NVIDIA driver 610.47 install', 'progress', 'Installer awaiting UAC'],
+  ['Future', 'Suno song generation', 'planned', 'none', 'not built', 1.0, 'med', 'Cool factor'],
+  ['Future', 'NVIDIA driver install', 'progress', 'none', 'attempted', 0.2, 'med', 'Prereq for Wan2GP'],
 ];
 
 const STATUS_LABEL = {
-  done: 'Done',
-  progress: 'In progress',
-  limited: 'Quota-limited',
-  planned: 'Planned',
+  done: 'Done', progress: 'In progress',
+  limited: 'Quota-limited', planned: 'Planned',
 };
+const LEVEL_LABEL = { high: 'High', med: 'Med', low: 'Low', none: 'None' };
+const LEVEL_RANK = { high: 3, med: 2, low: 1, none: 0 };
+const STATUS_RANK = { done: 4, limited: 3, progress: 2, planned: 1 };
 
-const tbody = document.querySelector('#features-table tbody');
-function render(filter) {
-  tbody.innerHTML = '';
-  for (const [cat, feat, status, notes] of FEATURES) {
-    if (filter !== 'all' && filter !== status) continue;
-    const tr = document.createElement('tr');
-    tr.dataset.status = status;
-    tr.innerHTML = `
-      <td class="cat">${cat}</td>
-      <td>${feat}</td>
-      <td><span class="status ${status}">${STATUS_LABEL[status]}</span></td>
-      <td class="notes">${notes}</td>`;
-    tbody.appendChild(tr);
-  }
+let currentFilter = 'all';
+let sortKey = null;
+let sortDir = 1;
+
+const COLS = ['cat', 'feat', 'status', 'confidence', 'testing', 'effort', 'value', 'notes'];
+
+function buildRows() {
+  return FEATURES.map(r => ({
+    cat: r[0], feat: r[1], status: r[2],
+    confidence: r[3], testing: r[4],
+    effort: r[5], value: r[6], notes: r[7],
+  }));
 }
-render('all');
+
+function renderRow(r) {
+  const tr = document.createElement('tr');
+  tr.dataset.status = r.status;
+  tr.innerHTML = `
+    <td class="cat">${r.cat}</td>
+    <td>${r.feat}</td>
+    <td><span class="status ${r.status}">${STATUS_LABEL[r.status]}</span></td>
+    <td><span class="level ${r.confidence}">${LEVEL_LABEL[r.confidence]}</span></td>
+    <td class="notes">${r.testing}</td>
+    <td class="effort">${r.effort}d</td>
+    <td><span class="level ${r.value}">${LEVEL_LABEL[r.value]}</span></td>
+    <td class="notes">${r.notes}</td>`;
+  return tr;
+}
+
+function render() {
+  let rows = buildRows();
+  if (currentFilter !== 'all') rows = rows.filter(r => r.status === currentFilter);
+
+  if (sortKey) {
+    rows.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === 'status') { av = STATUS_RANK[av]; bv = STATUS_RANK[bv]; }
+      else if (['confidence', 'value'].includes(sortKey)) { av = LEVEL_RANK[av]; bv = LEVEL_RANK[bv]; }
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+  }
+
+  const tbody = document.querySelector('#features-table tbody');
+  tbody.innerHTML = '';
+  rows.forEach(r => tbody.appendChild(renderRow(r)));
+}
 
 document.querySelectorAll('.filter-btn').forEach(b => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    render(b.dataset.filter);
+    currentFilter = b.dataset.filter;
+    render();
   });
 });
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.sort;
+    if (sortKey === k) sortDir *= -1;
+    else { sortKey = k; sortDir = -1; }
+    document.querySelectorAll('th').forEach(x => x.classList.remove('sorted'));
+    th.classList.add('sorted');
+    render();
+  });
+});
+
+render();
 </script>
 </body>
 </html>

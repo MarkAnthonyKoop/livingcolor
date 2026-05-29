@@ -1,51 +1,51 @@
-Category,Feature,Status,Notes
-Drawing,Pencil with adjustable size (1-80px),Done,
-Drawing,Eraser,Done,
-Drawing,Paint bucket flood fill,Done,
-Drawing,Pattern fills (solid/rainbow/sunset/ocean/fire/forest),Done,6 patterns
-Drawing,16-color palette + custom picker,Done,
-Drawing,"Undo (Ctrl+Z, 30 levels)",Done,
-Drawing,Clear canvas,Done,
-Drawing,Coordinate scaling fix,Done,Was breaking flood fill
-AI Vision,Claude Code recognition,Done,User's Max subscription
-AI Vision,Gemini 2.5 Flash fallback,Done,"Browser-side, obfuscated key"
-AI Vision,Perplexity Sonar fallback,Done,Browser-side
-AI Vision,Composition capture,Done,full figure/headshot/wide
-AI Vision,Character preservation,Done,"Quirks, proportions, expression"
-Chat,Toddler-friendly personality,Done,"Warm, simple, emoji-rich"
-Chat,Big response buttons,Done,≥56px on mobile
-Chat,16-emoji grid fallback,Done,
-Chat,Always-on chat input,Done,Enter to send
-Chat,Esc to abort current work,Done,
-Chat,System logs in chat,Done,Shows fallback chain
-Chat,Free-form conversation,Done,Via Perplexity
-Image Gen,Pollinations.ai,Done,"768x768, no auth"
-Image Gen,Style hint field,Done,Optional
-Image Gen,Reimagine / Faithful toggle,Done,
-Image Gen,Suggestion chips,Done,"smiley, cat, house, etc."
-Animation,Particle dissolve,Done,sketch -> AI image
-Animation,Living effect,Done,"Client-side, always works"
-Animation,Claude-designed motion plans,Done,JSON vectors per subject
-Animation,Magic particles fallback,Done,
-Animation,Veo 3.1 video,Quota-limited,Free Gemini tier exhausted easily
-Animation,LTX Video (HF Spaces),Quota-limited,Free GPU tier exhausted easily
-Animation,Wan2GP local,Blocked,NVIDIA driver UAC pending
-Animation,Per-region motion,Planned,Segmented body parts animate separately
-Voice,ElevenLabs TTS (Laura voice),Done,Auto-plays AI text
-Voice,Voice on/off toggle,Done,Default ON
-Storage,Drawing archive,Done,/mnt/d/livingcolor by default
-Storage,Persistent config,Done,~/.livingcolor/config.json
-Storage,Conversation log,Done,Downloadable from settings
-Storage,Gallery view,Planned,Browse past drawings
-UX,Mobile/touch optimization,Done,44px+ targets
-UX,Settings gear,Done,"API key, backend, voice"
-UX,Bring to Life! button,Done,
-Backend,Flask server (optional),Done,Port 8091
-Backend,Claude Code subprocess,Done,Uses subscription
-Backend,Cloud deploy (Render),Blocked,GitHub OAuth pending
-Code Quality,42 unit tests,Done,All passing
-Code Quality,13 ES modules,Done,<=220 lines each
-Code Quality,API key obfuscation,Done,XOR encoding
-Code Quality,README + CLAUDE.md docs,Done,
-Future,Suno song generation,Planned,Claude writes lyrics -> Suno
-Future,NVIDIA driver install,Blocked,Installer awaiting UAC
+Category,Feature,Status,Confidence,Testing,Effort_days,Value,Notes
+Drawing,Pencil with adjustable size (1-80px),Done,High,unit+manual,0.2,High,Table stakes
+Drawing,Eraser,Done,High,unit,0.1,High,
+Drawing,Paint bucket flood fill,Done,High,unit (8 cases),0.5,High,Coord-scaling bug fixed
+Drawing,Pattern fills (6),Done,Med,manual,0.3,Med,rainbow/sunset/ocean/fire/forest
+Drawing,16-color palette + picker,Done,High,manual,0.1,High,
+Drawing,Undo (30 levels),Done,High,unit,0.2,High,
+Drawing,Clear canvas,Done,High,unit,0.05,High,
+Drawing,Coordinate scaling fix,Done,High,unit,0.2,High,Critical bugfix
+AI Vision,Claude Code recognition,Done,High,manual E2E,0.5,High,User's Max subscription
+AI Vision,Gemini 2.5 Flash fallback,Done,Med,manual E2E,0.3,High,Rate-limit prone
+AI Vision,Perplexity Sonar fallback,Done,High,manual E2E,0.2,Med,Reliable backup
+AI Vision,Composition capture,Done,High,manual E2E,0.2,High,full figure/headshot/wide
+AI Vision,Character preservation,Done,High,E2E (stick figure),0.3,High,Real differentiator
+Chat,Toddler-friendly personality,Done,High,manual,0.3,High,
+Chat,Big response buttons,Done,High,screenshot test,0.2,High,>=56px mobile
+Chat,16-emoji grid fallback,Done,High,manual,0.2,Med,
+Chat,Always-on chat input,Done,Med,E2E click,0.2,Med,Recently added
+Chat,Esc to abort current work,Done,Low,untested,0.1,Low,Needs real test
+Chat,System logs in chat,Done,High,manual E2E,0.2,Med,Helps debug
+Chat,Free-form chat (Perplexity),Done,Med,manual,0.3,Med,Not deeply tested
+Image Gen,Pollinations.ai (free),Done,High,manual E2E,0.2,High,Always works
+Image Gen,Style hint field,Done,High,manual,0.05,Low,
+Image Gen,Reimagine/Faithful toggle,Done,Med,manual,0.2,Med,Faithful path under-tested
+Image Gen,Suggestion chips,Done,High,manual,0.1,Med,
+Animation,Particle dissolve,Done,High,screenshot test,0.3,Med,Cosmetic
+Animation,Living effect (breathing+sparkles),Done,High,manual,0.5,High,Reliable fallback
+Animation,Claude motion plans,Done,Med,server test,0.4,High,Proof of concept
+Animation,Magic particles fallback,Done,High,manual,0.1,Low,
+Animation,Veo 3.1 video,Quota-limited,Low,manual E2E,0.5,High,Free quota exhausted easily
+Animation,LTX Video (HF Spaces),Quota-limited,Low,manual E2E,0.4,Med,Free GPU exhausted easily
+Animation,Wan2GP local (unlimited),Blocked,None,not run,1.5,High,Blocked on NVIDIA driver UAC
+Animation,Per-region motion,Planned,None,not built,1.5,High,Real animation without quotas
+Voice,ElevenLabs TTS (Laura),Done,Med,E2E + audio inspect,0.3,High,Critical for non-readers
+Voice,Voice on/off toggle,Done,High,code-level,0.05,Low,
+Storage,Drawing archive,Done,High,E2E,0.3,High,Parents can review
+Storage,Persistent config,Done,High,manual,0.1,Med,~/.livingcolor/config.json
+Storage,Conversation log,Done,High,manual download,0.2,Med,Debug tool
+Storage,Gallery view,Planned,None,not built,0.5,High,Browse past drawings
+UX,Mobile/touch optimization,Done,Med,headless screenshot,0.3,High,Needs real tablet test
+UX,Settings gear,Done,High,manual,0.1,Med,
+UX,Bring to Life! button,Done,High,manual,0.05,Low,
+Backend,Flask server,Done,High,curl + E2E,0.5,Med,"Optional, local-only"
+Backend,Claude Code subprocess,Done,High,manual E2E,0.3,High,Uses Max subscription
+Backend,Cloud deploy (Render),Blocked,None,config only,0.5,Med,GitHub OAuth pending
+Code Quality,42 unit tests (vitest),Done,High,CI-ready,0.5,High,All passing
+Code Quality,13 ES modules,Done,High,code review,0.5,Med,<=220 lines each
+Code Quality,API key obfuscation,Done,High,verified,0.2,Med,Avoids GitHub scanners
+Code Quality,README + CLAUDE.md docs,Done,Med,not re-reviewed,0.3,Med,
+Future,Suno song generation,Planned,None,not built,1.0,Med,Cool factor
+Future,NVIDIA driver install,Blocked,None,attempted,0.2,Med,Prereq for Wan2GP
