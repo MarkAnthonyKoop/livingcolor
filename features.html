@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LivingColor — Feature Status</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f0f13;
+    color: #e8e8ef;
+    padding: 2rem;
+    min-height: 100vh;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, #7c5cfc, #ff6baa, #ffb86b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: #8888a0;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+  .summary {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: #1a1a22;
+    border: 1px solid #2e2e3a;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .stat-num { font-size: 1.4rem; font-weight: 700; }
+  .stat .done { color: #44cc88; }
+  .stat .progress { color: #ffb86b; }
+  .stat .limited { color: #ffcc44; }
+  .stat .planned { color: #7c5cfc; }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: #1a1a22;
+    border: 1px solid #2e2e3a;
+    color: #e8e8ef;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .filter-btn:hover { background: #242430; }
+  .filter-btn.active { background: #7c5cfc; border-color: #7c5cfc; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1a1a22;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  thead {
+    background: #242430;
+    text-align: left;
+  }
+  th {
+    padding: 0.85rem 1rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8888a0;
+    font-weight: 600;
+  }
+  td {
+    padding: 0.7rem 1rem;
+    border-top: 1px solid #2e2e3a;
+    font-size: 0.92rem;
+    vertical-align: top;
+  }
+  tbody tr:hover { background: #1f1f2a; }
+
+  .cat {
+    color: #8888a0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status.done    { background: rgba(68, 204, 136, 0.15); color: #44cc88; }
+  .status.progress { background: rgba(255, 184, 107, 0.15); color: #ffb86b; }
+  .status.limited { background: rgba(255, 204, 68, 0.15);  color: #ffcc44; }
+  .status.planned { background: rgba(124, 92, 252, 0.15);  color: #9478ff; }
+
+  .notes { color: #8888a0; font-size: 0.85rem; }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.5rem; }
+    table { font-size: 0.85rem; }
+    th, td { padding: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>LivingColor Feature Status</h1>
+  <p class="subtitle">Updated 2026-05-29</p>
+
+  <div class="summary">
+    <div class="stat"><span class="stat-num done">36</span><span>Done ✅</span></div>
+    <div class="stat"><span class="stat-num limited">2</span><span>Works, quota-limited ⚠️</span></div>
+    <div class="stat"><span class="stat-num progress">4</span><span>In progress / blocked 🔄</span></div>
+    <div class="stat"><span class="stat-num planned">3</span><span>Planned 📝</span></div>
+  </div>
+
+  <div class="controls">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="done">Done</button>
+    <button class="filter-btn" data-filter="progress">In progress</button>
+    <button class="filter-btn" data-filter="limited">Quota-limited</button>
+    <button class="filter-btn" data-filter="planned">Planned</button>
+  </div>
+
+  <table id="features-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Feature</th>
+        <th>Status</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const FEATURES = [
+  ['Drawing', 'Pencil with adjustable size (1-80px)', 'done', ''],
+  ['Drawing', 'Eraser', 'done', ''],
+  ['Drawing', 'Paint bucket flood fill', 'done', ''],
+  ['Drawing', 'Pattern fills (solid/rainbow/sunset/ocean/fire/forest)', 'done', '6 patterns'],
+  ['Drawing', '16-color palette + custom picker', 'done', ''],
+  ['Drawing', 'Undo (Ctrl+Z, 30 levels)', 'done', ''],
+  ['Drawing', 'Clear canvas', 'done', ''],
+  ['Drawing', 'Coordinate scaling fix (CSS vs pixel buffer)', 'done', 'Was breaking flood fill'],
+
+  ['AI Vision', 'Claude Code recognition', 'done', "User's Max subscription, OAuth"],
+  ['AI Vision', 'Gemini 2.5 Flash fallback', 'done', 'Browser-side, obfuscated key'],
+  ['AI Vision', 'Perplexity Sonar fallback', 'done', 'Browser-side, your key'],
+  ['AI Vision', 'Composition capture (full figure/headshot/wide)', 'done', ''],
+  ['AI Vision', 'Character preservation (quirks, proportions, expression)', 'done', '"Reimagine style, not character"'],
+
+  ['Chat', 'Toddler-friendly personality', 'done', 'Warm, simple, emoji-rich'],
+  ['Chat', 'Big response buttons (Yes!/Hmm/It\'s a…)', 'done', '≥56px on mobile'],
+  ['Chat', '16-emoji grid fallback', 'done', ''],
+  ['Chat', 'Always-on chat input', 'done', 'Enter to send'],
+  ['Chat', 'Esc to abort current work', 'done', ''],
+  ['Chat', 'System logs in chat (faded italics)', 'done', 'Shows fallback chain'],
+  ['Chat', 'Free-form conversation after generation', 'done', 'Via Perplexity'],
+
+  ['Image Gen', 'Pollinations.ai (free, always works)', 'done', '768×768, no auth'],
+  ['Image Gen', 'Style hint field', 'done', 'Optional'],
+  ['Image Gen', 'Reimagine / Faithful toggle', 'done', ''],
+  ['Image Gen', 'Suggestion chips', 'done', 'smiley, cat, house, etc.'],
+
+  ['Animation', 'Particle dissolve (sketch → AI image)', 'done', ''],
+  ['Animation', 'Living effect (breathing + sparkles)', 'done', 'Client-side, always works'],
+  ['Animation', 'Claude-designed motion plans', 'done', 'JSON vectors per subject'],
+  ['Animation', 'Magic particles fallback', 'done', ''],
+  ['Animation', 'Veo 3.1 video', 'limited', 'Free Gemini tier easily exhausted'],
+  ['Animation', 'LTX Video (HF Spaces)', 'limited', 'Free GPU tier easily exhausted'],
+  ['Animation', 'Wan2GP local (unlimited)', 'progress', 'Blocked on NVIDIA driver UAC'],
+  ['Animation', 'Per-region motion (segmented body parts)', 'planned', 'Wings flap, head bobs separately'],
+
+  ['Voice', 'ElevenLabs TTS (Laura voice)', 'done', 'Server-side, auto-plays AI text'],
+  ['Voice', 'Voice on/off toggle', 'done', 'Default ON'],
+
+  ['Storage', 'Drawing archive (configurable path)', 'done', '/mnt/d/livingcolor by default'],
+  ['Storage', 'Persistent settings ~/.livingcolor/config.json', 'done', ''],
+  ['Storage', 'Conversation log (localStorage)', 'done', 'Downloadable from settings'],
+  ['Storage', 'Gallery view (browse archive)', 'planned', 'View/revisit past drawings'],
+
+  ['UX', 'Mobile/touch optimization', 'done', '44px+ targets, no pinch-zoom'],
+  ['UX', 'Settings gear (key, backend, voice)', 'done', ''],
+  ['UX', 'Bring to Life! button', 'done', ''],
+
+  ['Backend', 'Flask server (optional, local)', 'done', 'Port 8091'],
+  ['Backend', 'Claude Code subprocess integration', 'done', "Uses user's subscription"],
+  ['Backend', 'Cloud deploy (Render)', 'progress', 'Configs ready, GitHub OAuth pending'],
+
+  ['Code Quality', '42 unit tests (vitest)', 'done', 'All passing'],
+  ['Code Quality', '13 ES modules, ≤220 lines each', 'done', ''],
+  ['Code Quality', 'API key obfuscation (XOR)', 'done', 'Avoids GitHub secret scanners'],
+  ['Code Quality', 'README + CLAUDE.md docs', 'done', ''],
+
+  ['Future', 'Suno song generation', 'planned', 'Claude writes lyrics → Suno'],
+  ['Future', 'NVIDIA driver 610.47 install', 'progress', 'Installer awaiting UAC'],
+];
+
+const STATUS_LABEL = {
+  done: '✅ Done',
+  progress: '🔄 In progress',
+  limited: '⚠️ Quota-limited',
+  planned: '📝 Planned',
+};
+
+const tbody = document.querySelector('#features-table tbody');
+function render(filter) {
+  tbody.innerHTML = '';
+  for (const [cat, feat, status, notes] of FEATURES) {
+    if (filter !== 'all' && filter !== status) continue;
+    const tr = document.createElement('tr');
+    tr.dataset.status = status;
+    tr.innerHTML = `
+      <td class="cat">${cat}</td>
+      <td>${feat}</td>
+      <td><span class="status ${status}">${STATUS_LABEL[status]}</span></td>
+      <td class="notes">${notes}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+render('all');
+
+document.querySelectorAll('.filter-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    render(b.dataset.filter);
+  });
+});
+</script>
+</body>
+</html>

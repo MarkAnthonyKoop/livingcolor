@@ -1,0 +1,51 @@
+Category,Feature,Status,Notes
+Drawing,Pencil with adjustable size (1-80px),Done,
+Drawing,Eraser,Done,
+Drawing,Paint bucket flood fill,Done,
+Drawing,Pattern fills (solid/rainbow/sunset/ocean/fire/forest),Done,6 patterns
+Drawing,16-color palette + custom picker,Done,
+Drawing,"Undo (Ctrl+Z, 30 levels)",Done,
+Drawing,Clear canvas,Done,
+Drawing,Coordinate scaling fix,Done,Was breaking flood fill
+AI Vision,Claude Code recognition,Done,User's Max subscription
+AI Vision,Gemini 2.5 Flash fallback,Done,"Browser-side, obfuscated key"
+AI Vision,Perplexity Sonar fallback,Done,Browser-side
+AI Vision,Composition capture,Done,full figure/headshot/wide
+AI Vision,Character preservation,Done,"Quirks, proportions, expression"
+Chat,Toddler-friendly personality,Done,"Warm, simple, emoji-rich"
+Chat,Big response buttons,Done,≥56px on mobile
+Chat,16-emoji grid fallback,Done,
+Chat,Always-on chat input,Done,Enter to send
+Chat,Esc to abort current work,Done,
+Chat,System logs in chat,Done,Shows fallback chain
+Chat,Free-form conversation,Done,Via Perplexity
+Image Gen,Pollinations.ai,Done,"768x768, no auth"
+Image Gen,Style hint field,Done,Optional
+Image Gen,Reimagine / Faithful toggle,Done,
+Image Gen,Suggestion chips,Done,"smiley, cat, house, etc."
+Animation,Particle dissolve,Done,sketch -> AI image
+Animation,Living effect,Done,"Client-side, always works"
+Animation,Claude-designed motion plans,Done,JSON vectors per subject
+Animation,Magic particles fallback,Done,
+Animation,Veo 3.1 video,Quota-limited,Free Gemini tier exhausted easily
+Animation,LTX Video (HF Spaces),Quota-limited,Free GPU tier exhausted easily
+Animation,Wan2GP local,Blocked,NVIDIA driver UAC pending
+Animation,Per-region motion,Planned,Segmented body parts animate separately
+Voice,ElevenLabs TTS (Laura voice),Done,Auto-plays AI text
+Voice,Voice on/off toggle,Done,Default ON
+Storage,Drawing archive,Done,/mnt/d/livingcolor by default
+Storage,Persistent config,Done,~/.livingcolor/config.json
+Storage,Conversation log,Done,Downloadable from settings
+Storage,Gallery view,Planned,Browse past drawings
+UX,Mobile/touch optimization,Done,44px+ targets
+UX,Settings gear,Done,"API key, backend, voice"
+UX,Bring to Life! button,Done,
+Backend,Flask server (optional),Done,Port 8091
+Backend,Claude Code subprocess,Done,Uses subscription
+Backend,Cloud deploy (Render),Blocked,GitHub OAuth pending
+Code Quality,42 unit tests,Done,All passing
+Code Quality,13 ES modules,Done,<=220 lines each
+Code Quality,API key obfuscation,Done,XOR encoding
+Code Quality,README + CLAUDE.md docs,Done,
+Future,Suno song generation,Planned,Claude writes lyrics -> Suno
+Future,NVIDIA driver install,Blocked,Installer awaiting UAC
