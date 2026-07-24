@@ -5,6 +5,7 @@ import json
 import subprocess
 import tempfile
 import base64
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,21 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 CLAUDE_CMD = os.environ.get('CLAUDE_CMD', 'claude')
 ELEVENLABS_KEY = os.environ.get('ELEVENLABS_API_KEY', '')  # from /etc/livingcolor/env; never commit a key here
 ELEVENLABS_VOICE = os.environ.get('ELEVENLABS_VOICE_ID', 'FGY2WhTYpPnrIDTdsKH5')  # Laura
+
+# Hosts we will download client-supplied image URLs from. Everything else is
+# rejected — urlopen would otherwise honor file:// and internal-network URLs.
+ALLOWED_IMAGE_HOSTS = {'image.pollinations.ai'}
+
+
+def fetch_image(url, dest, timeout=60):
+    """Download an image URL to dest; only https on ALLOWED_IMAGE_HOSTS is permitted."""
+    parts = urllib.parse.urlparse(url)
+    if parts.scheme != 'https' or parts.hostname not in ALLOWED_IMAGE_HOSTS:
+        raise ValueError(f'refusing to fetch from {parts.scheme}://{parts.hostname}')
+    req = urllib.request.Request(url, headers={'User-Agent': 'curl/8'})  # No Referer; Pollinations rejects it
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        dest.write_bytes(r.read())
+
 
 # --- Drawing archive: configurable storage location ---
 CONFIG_DIR = Path.home() / '.livingcolor'
@@ -419,12 +435,7 @@ def archive():
     if data.get('ai_image_url'):
         path = session_dir / 'ai_image.jpg'
         try:
-            req = urllib.request.Request(
-                data['ai_image_url'],
-                headers={'User-Agent': 'curl/8'}  # No Referer; minimal UA
-            )
-            with urllib.request.urlopen(req, timeout=60) as r:
-                path.write_bytes(r.read())
+            fetch_image(data['ai_image_url'], path)
             saved.append('ai_image.jpg')
         except Exception as e:
             saved.append(f'ai_image_failed: {e}')
@@ -470,9 +481,7 @@ def archive_story():
             continue
         path = story_dir / f'scene_{i+1:02d}.jpg'
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'curl/8'})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                path.write_bytes(r.read())
+            fetch_image(url, path)
             saved.append(path.name)
         except Exception as e:
             saved.append(f'scene_{i+1:02d}_failed: {e}')
