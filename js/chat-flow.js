@@ -453,6 +453,7 @@ function abortCurrentWork() {
     activeAbortController.abort();
     activeAbortController = null;
   }
+  stopStory();  // also stops narration via stopSpeaking()
   removeLoading();
   logStep('Stopped. What would you like to do?');
   hideButtons();

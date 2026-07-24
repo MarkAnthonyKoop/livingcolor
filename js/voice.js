@@ -5,6 +5,7 @@
 import { log } from './logger.js';
 
 let currentAudio = null;
+let speakEpoch = 0;  // bumped on stopSpeaking() so in-flight speak() requests discard their result
 
 export function isVoiceEnabled() {
   return localStorage.getItem('voice_off') !== 'true';
@@ -16,6 +17,7 @@ export function setVoiceEnabled(enabled) {
 }
 
 export function stopSpeaking() {
+  speakEpoch++;
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.src = '';
@@ -39,6 +41,7 @@ export async function speak(text) {
   if (clean.length < 2) return;
 
   stopSpeaking();
+  const epoch = speakEpoch;
 
   try {
     const res = await fetch('/api/speak', {
@@ -52,6 +55,7 @@ export async function speak(text) {
       return;
     }
     const blob = await res.blob();
+    if (epoch !== speakEpoch) return;  // cancelled while the request was in flight
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     currentAudio = audio;

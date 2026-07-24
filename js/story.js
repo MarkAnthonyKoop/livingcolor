@@ -22,7 +22,7 @@ function sanitizePrompt(p) {
     .replace(/[“”„]/g, '"')
     .replace(/[–—]/g, '-')
     .replace(/[…]/g, '...')
-    .replace(/[^\x20-\x7E]/g, '')  // strip remaining non-printable ASCII
+    .replace(/[\x00-\x1F\x7F]/g, '')  // strip control chars; keep accents/CJK — encodeURIComponent handles them
     .trim();
 }
 
