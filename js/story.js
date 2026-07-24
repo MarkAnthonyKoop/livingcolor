@@ -138,6 +138,7 @@ export async function playStory(imgEl, subject, info) {
   if (ctrl.cancelled) return true;
 
   imgEl.style.transition = 'opacity 0.5s ease-in-out';
+  let shown = 0;
 
   for (let i = 0; i < storyData.scenes.length; i++) {
     if (ctrl.cancelled) return true;
@@ -156,11 +157,15 @@ export async function playStory(imgEl, subject, info) {
     // Crossfade: fade out, swap, fade in
     imgEl.style.opacity = '0';
     await sleep(400, ctrl);
-    if (ctrl.cancelled) return true;
+    if (ctrl.cancelled) {
+      imgEl.style.opacity = '1';  // never leave the chat image invisible
+      return true;
+    }
     imgEl.src = img.src;
     // Force reflow then fade in
     void imgEl.offsetHeight;
     imgEl.style.opacity = '1';
+    shown++;
 
     // Speak narration (overlapping with hold)
     if (scene.narration) speak(scene.narration);
@@ -170,6 +175,12 @@ export async function playStory(imgEl, subject, info) {
     await sleep(holdMs, ctrl);
   }
 
+  if (shown === 0) {
+    // Every scene image failed — report failure so the caller's fallback chain
+    // (region motion → makeAlive) still gives the drawing some animation.
+    log('story', 'no scenes displayed, falling back');
+    return false;
+  }
   log('story', 'arc finished', { title: storyData.title });
   return true;
 }
