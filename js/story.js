@@ -95,6 +95,10 @@ export async function playStory(imgEl, subject, info) {
 
   log('story', 'arc received', { title: storyData.title, scenes: storyData.scenes.length });
 
+  // The /api/story call can take a minute — bail before archiving/preloading if
+  // the user cancelled meanwhile (otherwise the server archives a never-shown story).
+  if (ctrl.cancelled) return true;
+
   // Prepare scene URLs (single shared seed for character consistency across scenes)
   const seed = Math.floor(Math.random() * 999999);
   const sceneUrls = storyData.scenes.map(s => buildPollinationsUrl(s.image_prompt, seed));
