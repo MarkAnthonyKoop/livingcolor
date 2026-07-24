@@ -74,34 +74,35 @@ async function recognizeDrawing() {
         const data = await res.json();
         return parseSubjectResponse(data.candidates[0].content.parts[0].text.trim());
       }
-      logStep('Gemini rate limited (' + res.status + '), trying Perplexity…');
+      logStep('Gemini rate limited (' + res.status + '), trying Claude…');
     } catch (e) {
-      logStep('Gemini failed, trying Perplexity…');
+      logStep('Gemini failed, trying Claude…');
     }
   }
 
-  const pplxKey = 'pplx-' + '2c9bb3582958e78e2d1da34acb1ba6' + '071779ab67527f2ba0';
-  logStep('Trying Perplexity Sonar…');
+  // Server-side Claude vision (no browser API key). Runs on the user's subscription.
+  logStep('Trying Claude…');
   try {
-    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+    const res = await fetch('/api/recognize', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pplxKey },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [{ role: 'user', content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64 } }
-        ]}],
-        max_tokens: 300
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64 })
     });
     if (res.ok) {
       const data = await res.json();
-      return parseSubjectResponse(data.choices[0].message.content.trim());
+      if (data && !data.error) {
+        return {
+          subject: data.subject || '',
+          composition: data.composition || '',
+          details: data.details || '',
+          character: data.character || '',
+          message: data.message || ''
+        };
+      }
     }
-    logStep('Perplexity failed (' + res.status + ')');
+    logStep('Claude failed (' + res.status + ')');
   } catch (e) {
-    logStep('Perplexity failed: ' + e.message);
+    logStep('Claude failed: ' + e.message);
   }
 
   throw new Error('All vision providers unavailable — try again in a moment');
@@ -488,23 +489,16 @@ async function handleFreeFormMessage(text) {
 }
 
 async function chatWithAI(message) {
-  const pplxKey = 'pplx-' + '2c9bb3582958e78e2d1da34acb1ba6' + '071779ab67527f2ba0';
+  // Server-side Claude (no browser API key). Runs on the user's subscription.
   try {
-    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pplxKey },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          { role: 'system', content: 'You are a playful AI friend talking to a young child or their parent about a drawing. Be warm, brief (1-2 sentences), use emojis. Keep it simple and encouraging.' },
-          { role: 'user', content: message }
-        ],
-        max_tokens: 150
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
     });
     if (res.ok) {
       const data = await res.json();
-      return data.choices[0].message.content.trim();
+      if (data.reply) return data.reply.trim();
     }
   } catch (e) { /* fall through */ }
   return 'Hmm, I can\'t chat right now. Try drawing something new! 🎨';

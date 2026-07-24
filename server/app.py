@@ -14,7 +14,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 
 CLAUDE_CMD = os.environ.get('CLAUDE_CMD', 'claude')
-ELEVENLABS_KEY = os.environ.get('ELEVENLABS_API_KEY', 'sk_adb35ecedf556cdc84feed2b7ecedcaf70d6c108e9d7cccb')
+ELEVENLABS_KEY = os.environ.get('ELEVENLABS_API_KEY', '')  # from /etc/livingcolor/env; never commit a key here
 ELEVENLABS_VOICE = os.environ.get('ELEVENLABS_VOICE_ID', 'FGY2WhTYpPnrIDTdsKH5')  # Laura
 
 # --- Drawing archive: configurable storage location ---
@@ -127,6 +127,26 @@ def recognize():
         return jsonify({'error': str(e)}), 500
 
 
+CHAT_SYSTEM = (
+    'You are a playful, warm AI friend talking to a young child (or their parent) '
+    'about a drawing. Be encouraging and brief (1-2 short sentences), use 1-2 emojis, '
+    'keep words simple.'
+)
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """Kid-friendly chat via Claude (server-side; no browser API key)."""
+    message = (request.json or {}).get('message', '').strip()
+    if not message:
+        return jsonify({'error': 'no message'}), 400
+    try:
+        reply = claude(f'{CHAT_SYSTEM}\n\nChild says: {message}')
+        return jsonify({'reply': reply.strip()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/generate-prompt', methods=['POST'])
 def generate_prompt():
     data = request.json
@@ -190,6 +210,8 @@ def speak():
     text = (request.json or {}).get('text', '').strip()
     if not text:
         return jsonify({'error': 'no text'}), 400
+    if not ELEVENLABS_KEY:
+        return jsonify({'error': 'voice disabled: ELEVENLABS_API_KEY not configured'}), 503
     # Strip emoji-heavy text to under 250 chars for cost control
     text = text[:250]
     try:
