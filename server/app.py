@@ -23,14 +23,29 @@ ELEVENLABS_VOICE = os.environ.get('ELEVENLABS_VOICE_ID', 'FGY2WhTYpPnrIDTdsKH5')
 ALLOWED_IMAGE_HOSTS = {'image.pollinations.ai'}
 
 
-def fetch_image(url, dest, timeout=60):
-    """Download an image URL to dest; only https on ALLOWED_IMAGE_HOSTS is permitted."""
+def fetch_image(url, dest=None, timeout=60):
+    """Fetch an image URL and return its bytes, optionally also writing them to
+    dest. Only https on ALLOWED_IMAGE_HOSTS is permitted."""
     parts = urllib.parse.urlparse(url)
     if parts.scheme != 'https' or parts.hostname not in ALLOWED_IMAGE_HOSTS:
         raise ValueError(f'refusing to fetch from {parts.scheme}://{parts.hostname}')
     req = urllib.request.Request(url, headers={'User-Agent': 'curl/8'})  # No Referer; Pollinations rejects it
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        dest.write_bytes(r.read())
+        body = r.read()
+    if dest is not None:
+        dest.write_bytes(body)
+    return body
+
+
+def parse_claude_json(text):
+    """Parse Claude's JSON reply, tolerating a wrapping markdown code fence —
+    including a closing fence on the same line as the JSON."""
+    text = text.strip()
+    if text.startswith('```'):
+        text = text.split('\n', 1)[1] if '\n' in text else ''
+    if text.endswith('```'):
+        text = text[:-3]
+    return json.loads(text.strip())
 
 
 # --- Drawing archive: configurable storage location ---
@@ -315,15 +330,10 @@ def story():
     if style:
         prompt += f'\nStyle hint: {style}'
 
+    text = ''  # so the JSONDecodeError handler is safe if claude() itself raises it
     try:
         text = claude(prompt)
-        text = text.strip()
-        if text.startswith('```'):
-            text = text.split('\n', 1)[1] if '\n' in text else text
-            if text.endswith('```'):
-                text = text.rsplit('\n', 1)[0]
-            text = text.strip()
-        plan = json.loads(text)
+        plan = parse_claude_json(text)
         return jsonify(plan)
     except json.JSONDecodeError as e:
         return jsonify({'error': f'invalid JSON: {e}', 'raw': text[:500]}), 500
@@ -343,22 +353,14 @@ def region_motion():
 
     # Download the image (Pollinations rejects Referer header)
     try:
-        req = urllib.request.Request(image_url, headers={'User-Agent': 'curl/8'})
-        img_bytes = urllib.request.urlopen(req, timeout=60).read()
-        img_b64 = base64.b64encode(img_bytes).decode()
+        img_b64 = base64.b64encode(fetch_image(image_url)).decode()
     except Exception as e:
         return jsonify({'error': f'image download failed: {e}'}), 500
 
+    text = ''  # so the JSONDecodeError handler is safe if claude() itself raises it
     try:
         text = claude(REGION_PROMPT_TEMPLATE.format(subject=subject), img_b64)
-        # Strip markdown if Claude added it
-        text = text.strip()
-        if text.startswith('```'):
-            text = text.split('\n', 1)[1] if '\n' in text else text
-            if text.endswith('```'):
-                text = text.rsplit('\n', 1)[0]
-            text = text.strip()
-        plan = json.loads(text)
+        plan = parse_claude_json(text)
         return jsonify(plan)
     except json.JSONDecodeError as e:
         return jsonify({'error': f'invalid JSON from Claude: {e}', 'raw': text[:500]}), 500
@@ -401,14 +403,7 @@ def motion_plan():
 
     try:
         text = claude(instruction)
-        # Strip markdown code fences if Claude added them
-        text = text.strip()
-        if text.startswith('```'):
-            text = text.split('\n', 1)[1] if '\n' in text else text
-            if text.endswith('```'):
-                text = text.rsplit('\n', 1)[0]
-            text = text.strip()
-        plan = json.loads(text)
+        plan = parse_claude_json(text)
         return jsonify(plan)
     except Exception as e:
         return jsonify({'error': str(e), 'fallback': True}), 500
