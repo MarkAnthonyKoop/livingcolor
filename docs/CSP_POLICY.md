@@ -24,7 +24,7 @@ today at no cost.**
 | Directive | Needs | Why |
 |-----------|-------|-----|
 | `script-src` | `'self' https://cdn.jsdelivr.net` | the Gradio client, loaded twice: a `<script>` tag (index.html:8) and a dynamic `import()` in `storyboard.js:70` |
-| `connect-src` | `'self' https://generativelanguage.googleapis.com https://cdn.jsdelivr.net https://*.hf.space wss://*.hf.space` | Gemini vision fallback (`providers.js`); the Gradio client connects to the HF Space `Lightricks/ltx-video-distilled` (`storyboard.js:73`) over https **and websockets** |
+| `connect-src` | `'self' https://generativelanguage.googleapis.com https://cdn.jsdelivr.net https://huggingface.co https://*.hf.space wss://*.hf.space` | Gemini vision fallback (`providers.js`); the Gradio client resolves the Space host via **`https://huggingface.co/api/spaces/…/host`** (apex domain — see correction below) and then connects to `Lightricks/ltx-video-distilled` over https **and websockets** |
 | `img-src` | `'self' data: blob: https://image.pollinations.ai` | Pollinations art; `data:` for canvas `toDataURL()` undo snapshots; `blob:` for generated media |
 | `media-src` | `'self' blob:` | ElevenLabs narration and generated video arrive as blobs (`voice.js:61`, `video.js:42`) |
 | `style-src` | `'self' 'unsafe-inline'` | 14 inline `style="display:none"` attributes in index.html — see note below |
@@ -36,8 +36,33 @@ today at no cost.**
 ## Proposed header
 
 ```
-Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://generativelanguage.googleapis.com https://cdn.jsdelivr.net https://*.hf.space wss://*.hf.space; img-src 'self' data: blob: https://image.pollinations.ai; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
+Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://generativelanguage.googleapis.com https://cdn.jsdelivr.net https://huggingface.co https://*.hf.space wss://*.hf.space; img-src 'self' data: blob: https://image.pollinations.ai; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
 ```
+
+## CORRECTION — caught by the report-only run (2026-07-25 15:30)
+
+A live browser run with DevTools open produced exactly one CSP violation, and it proves the
+report-only step was worth taking:
+
+```
+Connecting to 'https://huggingface.co/api/spaces/Lightricks/ltx-video-distilled/host'
+violates the following Content Security Policy directive: "connect-src … https://*.hf.space …"
+The policy is report-only, so the violation has been logged but no further action has been taken.
+```
+
+**Why my inventory missed it:** I derived origins by grepping the source, which shows only
+`Client.connect("Lightricks/ltx-video-distilled")`. The Gradio client *first* resolves that Space
+to a host by calling the **apex domain** `https://huggingface.co/api/spaces/…/host` — a request
+that exists only at runtime, in third-party code. Had we enforced straight away, LTX video
+generation would have broken silently in the fallback path (the hardest kind of bug to notice).
+
+**Fix: add `https://huggingface.co` to `connect-src`** (done in the table and header above).
+Everything else verified clean through a full run: page load, canvas, Gemini fetch (allowed,
+403'd by the server — proving the directive works), Claude recognition, Pollinations images,
+blob narration audio, and generated video.
+
+Lesson worth keeping: *static origin inventories under-count third-party clients; only a runtime
+report-only pass finds what a library does on your behalf.*
 
 ## Note on `style-src 'unsafe-inline'`
 
