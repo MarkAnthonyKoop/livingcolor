@@ -62,8 +62,10 @@ def archive_story():
     subject = (data.get('subject', 'untitled') or 'untitled').replace('/', '_').replace(' ', '_')
     title = data.get('title', 'Story')
     scenes = data.get('scenes', [])
-    if not scenes:
+    if not scenes or not isinstance(scenes, list):
         return jsonify({'error': 'no scenes'}), 400
+    if not all(isinstance(s, dict) for s in scenes):
+        return jsonify({'error': 'malformed scenes'}), 400
 
     # Find or create the latest session dir for this subject (or make a new one)
     base = core.archive_dir()

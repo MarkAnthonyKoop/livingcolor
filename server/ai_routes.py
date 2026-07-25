@@ -69,9 +69,10 @@ CHAT_SYSTEM = (
 @ai_bp.route('/api/chat', methods=['POST'])
 def chat():
     """Kid-friendly chat via Claude (server-side; no browser API key)."""
-    message = (request.get_json(silent=True) or {}).get('message', '').strip()
-    if not message:
+    message = (request.get_json(silent=True) or {}).get('message', '')
+    if not isinstance(message, str) or not message.strip():
         return jsonify({'error': 'no message'}), 400
+    message = message.strip()
     try:
         reply = core.claude(f'{CHAT_SYSTEM}\n\nChild says: {message}')
         return jsonify({'reply': reply.strip()})
@@ -139,9 +140,10 @@ def animate_prompt():
 @ai_bp.route('/api/speak', methods=['POST'])
 def speak():
     """Text → MP3 audio via ElevenLabs."""
-    text = (request.get_json(silent=True) or {}).get('text', '').strip()
-    if not text:
+    text = (request.get_json(silent=True) or {}).get('text', '')
+    if not isinstance(text, str) or not text.strip():
         return jsonify({'error': 'no text'}), 400
+    text = text.strip()
     if not core.ELEVENLABS_KEY:
         return jsonify({'error': 'voice disabled: ELEVENLABS_API_KEY not configured'}), 503
     # Strip emoji-heavy text to under 250 chars for cost control
