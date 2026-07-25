@@ -90,8 +90,11 @@ export async function playStory(imgEl, subject, info) {
     return false;
   }
 
-  if (!storyData?.scenes?.length) {
-    log('story', 'no scenes returned');
+  // Validate shape before use: a string has .length too, and a scenes array can
+  // contain nulls — either would throw partway through playback.
+  if (!Array.isArray(storyData?.scenes) || storyData.scenes.length === 0
+      || !storyData.scenes.every(s => s && typeof s === 'object')) {
+    log('story', 'malformed or empty scenes', { type: typeof storyData?.scenes });
     return false;
   }
 
