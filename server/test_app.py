@@ -58,7 +58,7 @@ def test_fetch_image_allows_pollinations_and_writes_dest(tmp_path, monkeypatch):
             return self
         def __exit__(self, *a):
             return False
-    monkeypatch.setattr(core.urllib.request, 'urlopen', lambda req, timeout: FakeResponse())
+    monkeypatch.setattr(core._image_opener, 'open', lambda req, timeout: FakeResponse())
     dest = tmp_path / 'img.jpg'
     body = core.fetch_image('https://image.pollinations.ai/prompt/cat', dest)
     assert body == b'jpegbytes'
@@ -123,3 +123,34 @@ def test_region_motion_refuses_bad_url(client):
 def test_region_motion_requires_url(client):
     r = client.post('/api/region-motion', json={})
     assert r.status_code == 400
+
+
+# --- config write gate + redirect validation + null bodies ---
+
+def test_archive_config_post_forbidden_by_default(client):
+    r = client.post('/api/archive/config', json={'archive_dir': '/etc'})
+    assert r.status_code == 403
+
+
+def test_archive_config_get_still_works(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(core, 'get_config', lambda: {'archive_dir': str(tmp_path)})
+    r = client.get('/api/archive/config')
+    assert r.status_code == 200
+    assert r.get_json()['archive_dir'] == str(tmp_path)
+
+
+@pytest.mark.parametrize('newurl', [
+    'http://169.254.169.254/latest/meta-data',
+    'file:///etc/passwd',
+    'https://evil.com/x.jpg',
+])
+def test_redirects_are_revalidated(newurl):
+    handler = core._AllowlistedRedirect()
+    with pytest.raises(ValueError, match='refusing to fetch'):
+        handler.redirect_request(None, None, 302, 'Found', {}, newurl)
+
+
+def test_null_json_body_is_clean_400_not_500(client):
+    r = client.post('/api/region-motion', data='null', content_type='application/json')
+    assert r.status_code == 400
+    assert r.get_json()['error'] == 'missing image_url'

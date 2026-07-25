@@ -17,15 +17,35 @@ ELEVENLABS_VOICE = os.environ.get('ELEVENLABS_VOICE_ID', 'FGY2WhTYpPnrIDTdsKH5')
 # rejected — urlopen would otherwise honor file:// and internal-network URLs.
 ALLOWED_IMAGE_HOSTS = {'image.pollinations.ai'}
 
+# Whether POST /api/archive/config may change the archive directory. Off by
+# default: on a public deployment that endpoint is an arbitrary-path write
+# primitive. Local dev can export LIVINGCOLOR_ALLOW_CONFIG_WRITE=1.
+ALLOW_CONFIG_WRITE = os.environ.get('LIVINGCOLOR_ALLOW_CONFIG_WRITE') == '1'
 
-def fetch_image(url, dest=None, timeout=60):
-    """Fetch an image URL and return its bytes, optionally also writing them to
-    dest. Only https on ALLOWED_IMAGE_HOSTS is permitted."""
+
+def _check_image_url(url):
     parts = urllib.parse.urlparse(url)
     if parts.scheme != 'https' or parts.hostname not in ALLOWED_IMAGE_HOSTS:
         raise ValueError(f'refusing to fetch from {parts.scheme}://{parts.hostname}')
+
+
+class _AllowlistedRedirect(urllib.request.HTTPRedirectHandler):
+    """Re-validate every redirect hop — urlopen would otherwise follow a
+    redirect from an allowlisted host to file:// or an internal address."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _check_image_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_image_opener = urllib.request.build_opener(_AllowlistedRedirect)
+
+
+def fetch_image(url, dest=None, timeout=60):
+    """Fetch an image URL and return its bytes, optionally also writing them to
+    dest. Only https on ALLOWED_IMAGE_HOSTS is permitted — including redirects."""
+    _check_image_url(url)
     req = urllib.request.Request(url, headers={'User-Agent': 'curl/8'})  # No Referer; Pollinations rejects it
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _image_opener.open(req, timeout=timeout) as r:
         body = r.read()
     if dest is not None:
         dest.write_bytes(body)
@@ -65,7 +85,7 @@ def archive_dir():
     return d
 
 
-def claude(prompt, image_b64=None):
+def claude(prompt, image_b64=None, timeout=120):
     """Run Claude Code in non-interactive mode. Returns response text."""
     with tempfile.TemporaryDirectory() as tmpdir:
         img_path = None
@@ -87,7 +107,7 @@ def claude(prompt, image_b64=None):
              '--no-session-persistence', '--dangerously-skip-permissions',
              '--add-dir', tmpdir],
             input=full_prompt, capture_output=True, text=True,
-            timeout=120, cwd=tmpdir, env=env
+            timeout=timeout, cwd=tmpdir, env=env
         )
 
         if result.returncode != 0:

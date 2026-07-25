@@ -14,7 +14,7 @@ archive_bp = Blueprint('archive', __name__)
 @archive_bp.route('/api/archive', methods=['POST'])
 def archive():
     """Save a drawing + AI output to the archive directory."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     ts = datetime.now().strftime('%Y%m%d-%H%M%S-%f')[:-3]
     subject = (data.get('subject', 'untitled') or 'untitled').replace('/', '_').replace(' ', '_')
     session_dir = core.archive_dir() / f'{ts}-{subject}'
@@ -58,7 +58,7 @@ def archive():
 @archive_bp.route('/api/archive-story', methods=['POST'])
 def archive_story():
     """Save a generated story arc to the current session's archive folder."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     subject = (data.get('subject', 'untitled') or 'untitled').replace('/', '_').replace(' ', '_')
     title = data.get('title', 'Story')
     scenes = data.get('scenes', [])
@@ -101,7 +101,11 @@ def archive_story():
 def archive_config():
     """Get or update archive config (e.g. change the archive directory)."""
     if request.method == 'POST':
-        data = request.json
+        # An open archive_dir setter is an arbitrary-path write primitive on a
+        # public deployment; writes need LIVINGCOLOR_ALLOW_CONFIG_WRITE=1.
+        if not core.ALLOW_CONFIG_WRITE:
+            return jsonify({'error': 'archive config is read-only on this deployment'}), 403
+        data = request.get_json(silent=True) or {}
         cfg = core.get_config()
         if 'archive_dir' in data:
             cfg['archive_dir'] = data['archive_dir']

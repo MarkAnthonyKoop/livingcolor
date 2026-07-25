@@ -56,7 +56,7 @@ STORY_PROMPT = (
 @motion_bp.route('/api/story', methods=['POST'])
 def story():
     """Ask Claude to write a multi-scene narrative arc for the drawing."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     subject = data.get('subject', 'creature')
     character = data.get('character', '')
     details = data.get('details', '')
@@ -75,7 +75,9 @@ def story():
 
     text = ''  # so the JSONDecodeError handler is safe if claude() itself raises it
     try:
-        text = core.claude(prompt)
+        # 55s cap: the client gives up at 60s, so a longer run only burns
+        # subscription time on a result nobody will receive.
+        text = core.claude(prompt, timeout=55)
         plan = core.parse_claude_json(text)
         return jsonify(plan)
     except json.JSONDecodeError as e:
@@ -87,7 +89,7 @@ def story():
 @motion_bp.route('/api/region-motion', methods=['POST'])
 def region_motion():
     """Ask Claude to segment the AI image into animatable regions + motion vectors."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     image_url = data.get('image_url', '')
     subject = data.get('subject', 'object')
 
@@ -114,7 +116,7 @@ def region_motion():
 @motion_bp.route('/api/motion-plan', methods=['POST'])
 def motion_plan():
     """Ask Claude Code to design a motion vector plan for the AI image."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     subject = data.get('subject', 'object')
     composition = data.get('composition', '')
     details = data.get('details', '')

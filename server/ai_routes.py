@@ -32,7 +32,7 @@ RECOGNIZE_PROMPT = (
 
 @ai_bp.route('/api/recognize', methods=['POST'])
 def recognize():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     image_b64 = data.get('image', '')
     try:
         text = core.claude(RECOGNIZE_PROMPT, image_b64)
@@ -69,7 +69,7 @@ CHAT_SYSTEM = (
 @ai_bp.route('/api/chat', methods=['POST'])
 def chat():
     """Kid-friendly chat via Claude (server-side; no browser API key)."""
-    message = (request.json or {}).get('message', '').strip()
+    message = (request.get_json(silent=True) or {}).get('message', '').strip()
     if not message:
         return jsonify({'error': 'no message'}), 400
     try:
@@ -81,7 +81,7 @@ def chat():
 
 @ai_bp.route('/api/generate-prompt', methods=['POST'])
 def generate_prompt():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     subject = data.get('subject', '')
     style = data.get('style', '')
     mode = data.get('mode', 'reimagine')
@@ -117,7 +117,7 @@ def generate_prompt():
 
 @ai_bp.route('/api/animate-prompt', methods=['POST'])
 def animate_prompt():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     subject = data.get('subject', '')
     mode = data.get('mode', 'reimagine')
 
@@ -139,7 +139,7 @@ def animate_prompt():
 @ai_bp.route('/api/speak', methods=['POST'])
 def speak():
     """Text → MP3 audio via ElevenLabs."""
-    text = (request.json or {}).get('text', '').strip()
+    text = (request.get_json(silent=True) or {}).get('text', '').strip()
     if not text:
         return jsonify({'error': 'no text'}), 400
     if not core.ELEVENLABS_KEY:
