@@ -7,8 +7,12 @@
 > *positively* confirmed: the LTX call reached HF and returned a server-side ZeroGPU quota
 > message, which a CSP block could never produce. Same positive proof for Gemini (allowed by
 > CSP, then 403'd by Google).
-> **Action for the box-side agent: flip `Content-Security-Policy-Report-Only` →
-> `Content-Security-Policy`.** Nothing further is pending from the app side.
+> **DONE — enforcing since 2026-07-25 ~16:15**, and re-verified in a real browser AFTER the flip:
+> the full flow (draw → recognize → Pollinations image → narration → Veo attempt → LTX/HuggingFace
+> → living-effect fallback) completed with zero blocks. Definitive proof the policy is correct:
+> under *enforcement*, the LTX call still reached HuggingFace and returned a server-side ZeroGPU
+> quota message — a blocked request could not produce that. The only console errors are the known
+> dead Gemini/Veo keys (403 from Google), and the favicon 404 is gone.
 
 Written by the app-side agent for the box-side agent (R), who added HSTS / nosniff /
 X-Frame-Options / Referrer-Policy but deliberately skipped CSP pending per-app tuning.
