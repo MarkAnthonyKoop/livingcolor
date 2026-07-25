@@ -2,6 +2,7 @@
 
 import { getChatMessages, addChatMessage } from './state.js';
 import { speak } from './voice.js';
+import { log } from './logger.js';
 
 let chatContainer = null;
 let chatButtons = null;
@@ -160,4 +161,10 @@ function scrollToBottom() {
 export function hidePlaceholder() {
   const ph = document.getElementById('chat-placeholder');
   if (ph) ph.style.display = 'none';
+}
+
+// Faint system status line in chat + persistent log.
+export function logStep(msg) {
+  log('flow', msg);
+  appendMessage({ role: 'system', type: 'text', content: msg });
 }

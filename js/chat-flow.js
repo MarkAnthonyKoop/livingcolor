@@ -1,16 +1,17 @@
 // Conversational flow: recognition, response handling, generation pipeline.
 
-import { GEMINI_URL, POLLINATIONS_IMAGE, setChatSubject, setLastGeneratedPrompt } from './state.js';
-import { getApiKey, showSetup } from './setup.js';
+import { setChatSubject } from './state.js';
 import { isCanvasBlank, getCanvasBase64 } from './canvas.js';
 import { startVeoGeneration, resetVideoUI } from './video.js';
 import {
   appendMessage, removeLoading, showButtons, showEmojiGrid,
-  showTextInput, hideButtons, setButtonHandler, hidePlaceholder,
+  showTextInput, hideButtons, setButtonHandler, hidePlaceholder, logStep,
 } from './chat.js';
+import { recognizeDrawing, generateImage } from './providers.js';
+import { applyLivingToLastImage } from './animate-flow.js';
 import { log } from './logger.js';
-import { makeAlive, stopLiving } from './living.js';
-import { animateRegions, stopRegionAnimation } from './regions.js';
+import { stopLiving } from './living.js';
+import { stopRegionAnimation } from './regions.js';
 import { playStory, stopStory } from './story.js';
 
 const EMOJI_ITEMS = [
@@ -23,143 +24,6 @@ const EMOJI_ITEMS = [
   { emoji: '⭐', label: 'star' },              { emoji: '🌈', label: 'rainbow' },
   { emoji: '🎂', label: 'cake' },       { emoji: '🚀', label: 'rocket' },
 ];
-
-// Log step status — appears as faint system messages in chat + persistent log
-function logStep(msg) {
-  log('flow', msg);
-  appendMessage({ role: 'system', type: 'text', content: msg });
-}
-
-// Step 1: Try AI providers in order, logging each attempt
-async function recognizeDrawing() {
-  const b64 = getCanvasBase64();
-  const prompt = 'You are a warm, playful AI friend talking to a young child (age 2-5) who just drew a picture. React with excitement in 1-2 short sentences. Use 1-2 emojis. Ask if you guessed right.\n\nThen on separate lines at the end, write:\nSUBJECT: <1-3 words naming what they drew>\nCOMPOSITION: <one short phrase: "full figure", "headshot", "wide scene", "close-up", "object on background", etc>\nDETAILS: <a sentence describing what they actually drew: body parts visible, action/pose, colors, positions>\nCHARACTER: <2-3 sentences capturing the drawing\'s distinctive quirks — proportions (e.g. "oblong head", "long thin arms", "tiny legs"), shapes (round/oval/square), expression/mood, posture, any unusual or charming details. These are the things that make THIS drawing unique, not just any drawing of a {subject}. Be specific and faithful to what you actually see.>';
-
-  const useBackend = localStorage.getItem('use_backend') === 'true';
-
-  if (useBackend) {
-    logStep('Trying Claude Code (local)…');
-    try {
-      const res = await fetch('/api/recognize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: b64 }),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.message) return { message: data.message, subject: data.subject };
-      }
-      logStep('Claude Code unavailable, falling back…');
-    } catch (e) {
-      logStep('Claude Code unavailable (' + e.message + ')');
-    }
-  }
-
-  const geminiKey = getApiKey();
-  if (geminiKey) {
-    logStep('Trying Gemini Vision…');
-    try {
-      const res = await fetch(GEMINI_URL + '?key=' + geminiKey, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [
-            { text: prompt },
-            { inline_data: { mime_type: 'image/jpeg', data: b64 } }
-          ]}]
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return parseSubjectResponse(data.candidates[0].content.parts[0].text.trim());
-      }
-      logStep('Gemini rate limited (' + res.status + '), trying Claude…');
-    } catch (e) {
-      logStep('Gemini failed, trying Claude…');
-    }
-  }
-
-  // Server-side Claude vision (no browser API key). Runs on the user's subscription.
-  logStep('Trying Claude…');
-  try {
-    const res = await fetch('/api/recognize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: b64 })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && !data.error) {
-        return {
-          subject: data.subject || '',
-          composition: data.composition || '',
-          details: data.details || '',
-          character: data.character || '',
-          message: data.message || ''
-        };
-      }
-    }
-    logStep('Claude failed (' + res.status + ')');
-  } catch (e) {
-    logStep('Claude failed: ' + e.message);
-  }
-
-  throw new Error('All vision providers unavailable — try again in a moment');
-}
-
-function parseSubjectResponse(text) {
-  const lines = text.split('\n');
-  const findLine = (key) => {
-    const l = lines.find(x => x.trim().toUpperCase().startsWith(key + ':'));
-    return l ? l.split(':').slice(1).join(':').trim() : '';
-  };
-  const subject = findLine('SUBJECT');
-  const composition = findLine('COMPOSITION');
-  const details = findLine('DETAILS');
-  const character = findLine('CHARACTER');
-  const meta = ['SUBJECT', 'COMPOSITION', 'DETAILS', 'CHARACTER'];
-  const message = lines
-    .filter(l => !meta.some(k => l.trim().toUpperCase().startsWith(k + ':')))
-    .join('\n').trim();
-  return { message, subject, composition, details, character };
-}
-
-// Step 2: Generate image prompt + Pollinations URL
-async function generateImage(subject, styleHint, composition, details, character) {
-  const mode = document.getElementById('animation-mode')?.checked ? 'faithful' : 'reimagine';
-  const useBackend = localStorage.getItem('use_backend') === 'true';
-  let prompt;
-
-  if (useBackend) {
-    try {
-      const res = await fetch('/api/generate-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, style: styleHint, mode, composition, details, character })
-      });
-      if (res.ok) prompt = (await res.json()).prompt;
-    } catch (e) { /* fall through */ }
-  }
-
-  if (!prompt) {
-    const compHint = composition ? ', ' + composition : '';
-    const detailHint = details ? ' Scene: ' + details + '.' : '';
-    const charHint = character ? ' Preserve these distinctive traits: ' + character : '';
-    prompt = styleHint
-      ? subject + compHint + ', ' + styleHint + ', highly detailed, vivid colors, masterpiece.' + detailHint + charHint
-      : 'A beautiful, vibrant ' + subject + compHint + ', highly detailed, vivid colors, masterpiece, whimsical, magical.' + detailHint + charHint;
-  }
-  setLastGeneratedPrompt(prompt);
-  log('flow', 'final image prompt', { prompt: prompt.slice(0, 300) });
-  logStep('Generating with Pollinations.ai…');
-  const encoded = encodeURIComponent(prompt);
-  const seed = Math.floor(Math.random() * 999999);
-  return {
-    url: POLLINATIONS_IMAGE + encoded + '?width=768&height=768&seed=' + seed + '&nologo=true',
-    prompt,
-  };
-}
 
 // Main entry point: start the conversational flow
 export async function startChatFlow() {
@@ -324,77 +188,6 @@ async function archiveDrawing(subject, aiImageUrl, prompt) {
   } catch (e) {
     log('archive', 'failed', { error: e.message });
   }
-}
-
-async function applyLivingToLastImage() {
-  const imgs = document.querySelectorAll('.chat-bubble img');
-  if (imgs.length === 0) return;
-  const lastImg = imgs[imgs.length - 1];
-  const useBackend = localStorage.getItem('use_backend') === 'true';
-  const subject = window._lcSubject || 'object';
-  const info = window._lcDrawingInfo || {};
-
-  // PRIMARY when backend on: narrative story arc (Claude writes 4 scenes,
-  // each becomes a Pollinations image with narration). Real progression.
-  if (useBackend) {
-    try {
-      logStep('Writing your story...');
-      const ok = await playStory(lastImg, subject, info);
-      if (ok) return;
-    } catch (e) {
-      log('story', 'fatal, falling back to regions', { error: e.message });
-    }
-  }
-
-  // FALLBACK 1: per-region motion (separate parts animate)
-  if (useBackend && lastImg.src) {
-    try {
-      const res = await fetch('/api/region-motion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: lastImg.src, subject }),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (res.ok) {
-        const plan = await res.json();
-        log('regions', 'plan received', { count: plan.regions?.length });
-        const apply = () => animateRegions(lastImg, plan);
-        if (lastImg.complete) apply();
-        else lastImg.addEventListener('load', apply, { once: true });
-        return;
-      }
-    } catch (e) {
-      log('regions', 'region-motion failed', { error: e.message });
-    }
-  }
-
-  // Fallback: whole-image motion plan
-  let plan = null;
-  if (useBackend) {
-    try {
-      const info = window._lcDrawingInfo || {};
-      const res = await fetch('/api/motion-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: window._lcSubject || 'object',
-          composition: info.composition || '',
-          details: info.details || '',
-        }),
-        signal: AbortSignal.timeout(45000),
-      });
-      if (res.ok) {
-        plan = await res.json();
-        log('motion', 'plan received', { layers: plan.layers?.length });
-      }
-    } catch (e) {
-      log('motion', 'plan fetch failed', { error: e.message });
-    }
-  }
-
-  const start = () => makeAlive(lastImg, plan);
-  if (lastImg.complete) start();
-  else lastImg.addEventListener('load', start, { once: true });
 }
 
 function finishChat(subject) {
