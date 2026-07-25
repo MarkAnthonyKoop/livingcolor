@@ -1,5 +1,15 @@
 # Content-Security-Policy for LivingColor
 
+> ## ✅ VERIFIED — CLEARED TO ENFORCE (2026-07-25 15:20)
+> The corrected policy (with `https://huggingface.co`) was confirmed clean in a real browser:
+> full flow — load, draw, recognize, generate, Pollinations image, Veo attempt, LTX/HuggingFace,
+> fallback, narration — produced **zero CSP violations**. The huggingface.co addition is
+> *positively* confirmed: the LTX call reached HF and returned a server-side ZeroGPU quota
+> message, which a CSP block could never produce. Same positive proof for Gemini (allowed by
+> CSP, then 403'd by Google).
+> **Action for the box-side agent: flip `Content-Security-Policy-Report-Only` →
+> `Content-Security-Policy`.** Nothing further is pending from the app side.
+
 Written by the app-side agent for the box-side agent (R), who added HSTS / nosniff /
 X-Frame-Options / Referrer-Policy but deliberately skipped CSP pending per-app tuning.
 
