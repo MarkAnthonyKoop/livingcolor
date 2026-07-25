@@ -41,8 +41,11 @@ function showGeneratedVideo(b64) {
   const blob = new Blob([bytes], { type: 'video/mp4' });
   const url = URL.createObjectURL(blob);
 
+  // #result-video exists only to feed the download button (see index.html) —
+  // the chat UI shows the video in a message bubble. Un-hiding it here rendered
+  // a SECOND copy at width/height:100%, which blew the result panel past the
+  // viewport during playback.
   resultVideo.src = url;
-  resultVideo.style.display = '';
   resultImg.style.display = 'none';
   videoBtn.style.display = '';
 

@@ -58,8 +58,9 @@ async function getAnimationPrompt(basePrompt, mode) {
 function showVideo(blobUrl) {
   const resultVideo = document.getElementById('result-video');
   const resultImg = document.getElementById('result-image');
+  // Keep the raw element hidden — it backs the download button only; the chat
+  // UI renders the video in a bubble. See the note in video.js/showGeneratedVideo.
   resultVideo.src = blobUrl;
-  resultVideo.style.display = '';
   resultImg.style.display = 'none';
   document.getElementById('download-video-btn').style.display = '';
   if (ltxVideoCallback) { ltxVideoCallback(blobUrl); ltxVideoCallback = null; }
