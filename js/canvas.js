@@ -109,6 +109,10 @@ export function setupCanvas() {
   canvas.addEventListener('pointermove', draw);
   canvas.addEventListener('pointerup', endDraw);
   canvas.addEventListener('pointerleave', endDraw);
+  // iPads fire pointercancel constantly — palm rejection, edge-swipe gestures,
+  // notifications, a second finger. Without this the stroke stays 'live', so a
+  // hovering pencil or stray move draws a line the child never made.
+  canvas.addEventListener('pointercancel', endDraw);
   canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 }
 
