@@ -334,7 +334,7 @@ async function applyLivingToLastImage() {
   const subject = window._lcSubject || 'object';
   const info = window._lcDrawingInfo || {};
 
-  // PRIMARY when backend on: narrative story arc (Claude writes 4-6 scenes,
+  // PRIMARY when backend on: narrative story arc (Claude writes 4 scenes,
   // each becomes a Pollinations image with narration). Real progression.
   if (useBackend) {
     try {

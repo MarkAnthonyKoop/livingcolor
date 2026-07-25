@@ -1,4 +1,4 @@
-// Story playback: Claude writes a 4-6 scene narrative arc, each scene gets a
+// Story playback: Claude writes a 4-scene narrative arc, each scene gets a
 // Pollinations image + ElevenLabs narration. Plays as a kind of animated picture book.
 
 import { POLLINATIONS_IMAGE } from './state.js';
@@ -15,7 +15,7 @@ export function stopStory() {
   stopSpeaking();
 }
 
-function sanitizePrompt(p) {
+export function sanitizePrompt(p) {
   // Normalize smart quotes / dashes / weird unicode that can confuse upstream
   return (p || '')
     .replace(/[‘’‚]/g, "'")
@@ -26,7 +26,7 @@ function sanitizePrompt(p) {
     .trim();
 }
 
-function buildPollinationsUrl(prompt, seed) {
+export function buildPollinationsUrl(prompt, seed) {
   const cleaned = sanitizePrompt(prompt);
   // Cap length: very long URLs sometimes get rejected
   const capped = cleaned.length > 400 ? cleaned.slice(0, 400) : cleaned;
@@ -76,7 +76,9 @@ export async function playStory(imgEl, subject, info) {
         details: info.details || '',
         style: info.style || '',
       }),
-      signal: AbortSignal.timeout(120000),
+      // 60s cap keeps the old worst-case time-to-first-animation bound: if the
+      // story isn't ready by then, fall back to region motion / makeAlive.
+      signal: AbortSignal.timeout(60000),
     });
     if (!res.ok) {
       log('story', 'fetch failed', { status: res.status });
