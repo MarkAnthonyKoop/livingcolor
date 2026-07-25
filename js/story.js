@@ -26,13 +26,21 @@ export function sanitizePrompt(p) {
     .trim();
 }
 
+const URL_MAX = 1800;  // practical ceiling; longer URLs get rejected upstream
+const QUALITY_SUFFIX = ', highly detailed, vivid colors, masterpiece';
+const URL_TAIL = '?width=768&height=768&seed=';
+
 export function buildPollinationsUrl(prompt, seed) {
   const cleaned = sanitizePrompt(prompt);
-  // Cap length: very long URLs sometimes get rejected
-  const capped = cleaned.length > 400 ? cleaned.slice(0, 400) : cleaned;
-  const full = capped + ', highly detailed, vivid colors, masterpiece';
-  const encoded = encodeURIComponent(full);
-  return POLLINATIONS_IMAGE + encoded + '?width=768&height=768&seed=' + seed + '&nologo=true';
+  // Cap on the ENCODED length, not raw characters: one emoji is up to 12 chars
+  // once percent-encoded, so 400 raw chars can exceed 2500 in the URL.
+  let capped = cleaned.slice(0, 400);
+  const build = (p) => POLLINATIONS_IMAGE + encodeURIComponent(p + QUALITY_SUFFIX)
+    + URL_TAIL + seed + '&nologo=true';
+  while (capped && build(capped).length > URL_MAX) {
+    capped = capped.slice(0, Math.floor(capped.length * 0.8));
+  }
+  return build(capped);
 }
 
 function loadImage(url, label) {
@@ -98,6 +106,21 @@ export async function playStory(imgEl, subject, info) {
     return false;
   }
 
+  // Normalize every field we later call string/number methods on: Claude can
+  // emit a number or object where a string belongs, which would throw mid-playback.
+  const scenes = storyData.scenes.map(s => {
+    const hold = Number(s.hold_ms);
+    return {
+      image_prompt: typeof s.image_prompt === 'string' ? s.image_prompt : '',
+      narration: typeof s.narration === 'string' ? s.narration : '',
+      hold_ms: Number.isFinite(hold) ? hold : 4000,
+    };
+  });
+  if (!scenes.some(s => s.image_prompt)) {
+    log('story', 'no usable image prompts');
+    return false;
+  }
+
   log('story', 'arc received', { title: storyData.title, scenes: storyData.scenes.length });
 
   // The /api/story call can take a minute — bail before archiving/preloading if
@@ -106,7 +129,7 @@ export async function playStory(imgEl, subject, info) {
 
   // Prepare scene URLs (single shared seed for character consistency across scenes)
   const seed = Math.floor(Math.random() * 999999);
-  const sceneUrls = storyData.scenes.map(s => buildPollinationsUrl(s.image_prompt, seed));
+  const sceneUrls = scenes.map(s => buildPollinationsUrl(s.image_prompt, seed));
 
   // Archive the story
   fetch('/api/archive-story', {
@@ -115,7 +138,7 @@ export async function playStory(imgEl, subject, info) {
     body: JSON.stringify({
       subject,
       title: storyData.title,
-      scenes: storyData.scenes.map((s, i) => ({
+      scenes: scenes.map((s, i) => ({
         narration: s.narration,
         image_prompt: s.image_prompt,
         image_url: sceneUrls[i],
@@ -149,10 +172,10 @@ export async function playStory(imgEl, subject, info) {
   imgEl.style.transition = 'opacity 0.5s ease-in-out';
   let shown = 0;
 
-  for (let i = 0; i < storyData.scenes.length; i++) {
+  for (let i = 0; i < scenes.length; i++) {
     if (ctrl.cancelled) return true;
-    const scene = storyData.scenes[i];
-    log('story', 'scene ' + (i + 1) + ' start', { narration: scene.narration?.slice(0, 60) });
+    const scene = scenes[i];
+    log('story', 'scene ' + (i + 1) + ' start', { narration: scene.narration.slice(0, 60) });
 
     // Wait if this scene isn't loaded yet (max 20s)
     const img = await Promise.race([preloaded[i], sleep(20000, ctrl).then(() => null)]);
@@ -180,7 +203,7 @@ export async function playStory(imgEl, subject, info) {
     if (scene.narration) speak(scene.narration);
 
     // Hold the scene
-    const holdMs = Math.max(2500, Math.min(6000, scene.hold_ms || 4000));
+    const holdMs = Math.max(2500, Math.min(6000, scene.hold_ms));
     await sleep(holdMs, ctrl);
   }
 

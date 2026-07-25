@@ -33,7 +33,7 @@ RECOGNIZE_PROMPT = (
 @ai_bp.route('/api/recognize', methods=['POST'])
 def recognize():
     data = request.get_json(silent=True) or {}
-    image_b64 = data.get('image', '')
+    image_b64 = core.as_text(data.get('image'))
     try:
         text = core.claude(RECOGNIZE_PROMPT, image_b64)
         fields = {'SUBJECT': '', 'COMPOSITION': '', 'DETAILS': '', 'CHARACTER': ''}
@@ -83,12 +83,12 @@ def chat():
 @ai_bp.route('/api/generate-prompt', methods=['POST'])
 def generate_prompt():
     data = request.get_json(silent=True) or {}
-    subject = data.get('subject', '')
-    style = data.get('style', '')
-    mode = data.get('mode', 'reimagine')
-    composition = data.get('composition', '')
-    details = data.get('details', '')
-    character = data.get('character', '')
+    subject = core.as_text(data.get('subject'))
+    style = core.as_text(data.get('style'))
+    mode = core.as_text(data.get('mode'), 'reimagine')
+    composition = core.as_text(data.get('composition'))
+    details = core.as_text(data.get('details'))
+    character = core.as_text(data.get('character'))
 
     framing = f'Composition: {composition}. ' if composition else ''
     detail_note = f'The child drew: {details} ' if details else ''
@@ -119,8 +119,8 @@ def generate_prompt():
 @ai_bp.route('/api/animate-prompt', methods=['POST'])
 def animate_prompt():
     data = request.get_json(silent=True) or {}
-    subject = data.get('subject', '')
-    mode = data.get('mode', 'reimagine')
+    subject = core.as_text(data.get('subject'))
+    mode = core.as_text(data.get('mode'), 'reimagine')
 
     if mode == 'faithful':
         prompt = (f'Write a 1-2 sentence animation prompt for gentle, subtle motion '

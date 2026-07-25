@@ -52,9 +52,15 @@ describe('buildPollinationsUrl is allowlist-safe for any prompt', () => {
     }
   });
 
-  it('caps prompt length so the URL stays reasonable', () => {
-    const url = buildPollinationsUrl('x'.repeat(100000), 1);
-    expect(url.length).toBeLessThan(2000);   // common URL length ceiling
+  it('caps the ENCODED url length for multibyte prompts too', () => {
+    // one emoji costs up to 12 chars once percent-encoded, so an ASCII-only
+    // assertion here would pass while real prompts blew past the ceiling.
+    for (const prompt of ['x'.repeat(100000), '🦋'.repeat(5000),
+                          'niño pequeño '.repeat(500), '小さな猫'.repeat(2000)]) {
+      const url = buildPollinationsUrl(prompt, 1);
+      expect(url.length).toBeLessThanOrEqual(1800);
+      expect(new URL(url).hostname).toBe(ALLOWED_HOST);
+    }
   });
 });
 
@@ -71,6 +77,14 @@ class FailingImage {
   set src(_) { queueMicrotask(() => this.onerror && this.onerror(new Error('fail'))); }
 }
 
+// Images that LOAD, so hostile scene *content* is exercised during real playback
+// rather than short-circuited by every image failing.
+class OkImage {
+  constructor() { this.naturalWidth = 768; this.naturalHeight = 768; }
+  set src(v) { this._src = v; queueMicrotask(() => this.onload && this.onload()); }
+  get src() { return this._src; }
+}
+
 const HOSTILE_STORIES = [
   null,
   {},
@@ -83,6 +97,11 @@ const HOSTILE_STORIES = [
   { scenes: [{ image_prompt: 'x', hold_ms: -5000 }] },      // negative hold
   { scenes: [{ image_prompt: 'x', hold_ms: 'soon' }] },     // wrong type
   { title: 'x'.repeat(10000), scenes: [{ image_prompt: 'x' }] },
+  // non-string scene fields — the class that threw out of playStory before
+  { scenes: [{ image_prompt: 12345, narration: 'ok' }] },
+  { scenes: [{ image_prompt: 'ok', narration: 999 }] },
+  { scenes: [{ image_prompt: {}, narration: [] }] },
+  { scenes: [{ image_prompt: 'ok', narration: 'ok', hold_ms: 'soon' }] },
 ];
 
 describe('playStory survives hostile server payloads', () => {
@@ -99,7 +118,7 @@ describe('playStory survives hostile server payloads', () => {
   });
 
   it.each(HOSTILE_STORIES.map((s, i) => [i, s]))(
-    'returns a boolean and never throws: payload %i', async (_i, payload) => {
+    'returns a boolean and never throws (images FAIL): payload %i', async (_i, payload) => {
       vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve(
         url === '/api/story'
           ? { ok: true, json: () => Promise.resolve(payload) }
@@ -111,6 +130,39 @@ describe('playStory survives hostile server payloads', () => {
       expect(typeof result).toBe('boolean');
       expect(imgEl.style.opacity).not.toBe('0');   // never stranded invisible
     });
+
+  it.each(HOSTILE_STORIES.map((s, i) => [i, s]))(
+    'reaches playback with loadable images and still survives: payload %i',
+    async (_i, payload) => {
+      vi.stubGlobal('Image', OkImage);   // images LOAD → scene content is exercised
+      vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve(
+        url === '/api/story'
+          ? { ok: true, json: () => Promise.resolve(payload) }
+          : { ok: true, json: () => Promise.resolve({}) }
+      )));
+      const p = playStory(imgEl, 'cat', {});
+      await vi.advanceTimersByTimeAsync(180000);
+      expect(typeof await p).toBe('boolean');
+      expect(imgEl.style.opacity).not.toBe('0');
+    });
+
+  it('a scene with hold_ms: "soon" still holds, not NaN-instant', async () => {
+    vi.stubGlobal('Image', OkImage);
+    vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve(
+      url === '/api/story'
+        ? { ok: true, json: () => Promise.resolve({
+            scenes: [{ image_prompt: 'a', narration: 'n', hold_ms: 'soon' },
+                     { image_prompt: 'b', narration: 'n', hold_ms: 'soon' }] }) }
+        : { ok: true, json: () => Promise.resolve({}) }
+    )));
+    const p = playStory(imgEl, 'cat', {});
+    await vi.advanceTimersByTimeAsync(1000);   // well under one 2500ms minimum hold
+    const midSrc = imgEl.src;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(imgEl.src).toBe(midSrc);            // scene did NOT advance instantly
+    await vi.advanceTimersByTimeAsync(180000);
+    await p;
+  });
 
   it('handles a malformed JSON body without hanging', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

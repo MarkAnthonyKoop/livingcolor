@@ -52,6 +52,14 @@ def fetch_image(url, dest=None, timeout=60):
     return body
 
 
+def as_text(value, default=''):
+    """Client JSON may carry any type where we expect a string. Return a stripped
+    string, falling back to default for None/non-str — never raise."""
+    if not isinstance(value, str):
+        return default
+    return value.strip() or default
+
+
 def parse_claude_json(text):
     """Parse Claude's JSON reply, tolerating a wrapping markdown code fence —
     including a closing fence on the same line as the JSON."""

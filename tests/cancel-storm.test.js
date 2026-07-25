@@ -3,8 +3,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('../js/voice.js', () => ({ speak: vi.fn(), stopSpeaking: vi.fn() }));
 
 import { playStory, stopStory } from '../js/story.js';
-import { speak, stopSpeaking } from '../js/voice.js';
 
+// NOTE: no local unhandledRejection listener here — vitest reports and fails on
+// escaped rejections itself, and installing one silently swallows them.
 // A kid mashing buttons: overlapping starts, stops mid-flight, restarts.
 // The invariants that must hold no matter the interleaving:
 //   1. no unhandled rejection / thrown exception escapes
@@ -22,7 +23,7 @@ class OkImage {
   get src() { return this._src; }
 }
 
-let imgEl, unhandled;
+let imgEl;
 
 beforeEach(() => {
   imgEl = document.createElement('img');
@@ -31,15 +32,12 @@ beforeEach(() => {
     ok: true, json: () => Promise.resolve(STORY),
   })));
   vi.useFakeTimers();
-  unhandled = [];
-  process.on('unhandledRejection', (e) => unhandled.push(e));
 });
 
 afterEach(() => {
   stopStory();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  process.removeAllListeners('unhandledRejection');
 });
 
 describe('cancel storms', () => {
@@ -56,7 +54,6 @@ describe('cancel storms', () => {
     const results = await all;
     expect(results.every(r => typeof r === 'boolean')).toBe(true);
     expect(imgEl.style.opacity).not.toBe('0');
-    expect(unhandled).toHaveLength(0);
   });
 
   it('an older playback cannot resurrect after a newer one starts', async () => {
@@ -73,7 +70,6 @@ describe('cancel storms', () => {
     const settled = imgEl.src;
     await vi.advanceTimersByTimeAsync(60000);
     expect(imgEl.src).toBe(settled);
-    expect(unhandled).toHaveLength(0);
   });
 
   it('stop during the very first await is safe', async () => {
@@ -84,9 +80,12 @@ describe('cancel storms', () => {
     expect(imgEl.style.opacity).not.toBe('0');
   });
 
-  it('repeated stopSpeaking() calls are harmless', () => {
-    stopSpeaking.mockClear();   // playStory/stopStory call it too
-    for (let i = 0; i < 50; i++) stopSpeaking();
-    expect(stopSpeaking).toHaveBeenCalledTimes(50);
+  it('repeated stopStory() calls are harmless and idempotent', async () => {
+    const p = playStory(imgEl, 'cat', {});
+    await vi.advanceTimersByTimeAsync(100);
+    for (let i = 0; i < 50; i++) stopStory();   // the REAL function, not a mock
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(typeof await p).toBe('boolean');
+    expect(imgEl.style.opacity).not.toBe('0');
   });
 });

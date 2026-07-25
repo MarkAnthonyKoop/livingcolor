@@ -59,13 +59,30 @@ def test_legitimate_urls_still_pass_the_check(url, monkeypatch):
     assert core.fetch_image(url) == b'ok'
 
 
-def test_redirect_chain_to_allowlisted_host_is_permitted():
+def test_allowlisted_redirect_is_permitted_not_just_hostile_refused():
+    """The guard must let a legitimate same-host redirect through; a guard that
+    refuses everything would pass the hostile tests while breaking the feature."""
+    import urllib.request
     handler = core._AllowlistedRedirect()
-    # Same-host redirect (Pollinations does this for cache/CDN paths) must survive
-    # the check — the guard must not break legitimate redirects.
-    core._check_image_url('https://image.pollinations.ai/prompt/cat?seed=2')
-    with pytest.raises(ValueError):
-        handler.redirect_request(None, None, 302, 'Found', {}, 'https://image.pollinations.ai@evil.com/x')
+    req = urllib.request.Request('https://image.pollinations.ai/prompt/cat')
+    headers = {'location': 'https://image.pollinations.ai/prompt/cat?seed=2'}
+
+    class FP:
+        def read(self, *a):
+            return b''
+        def close(self):
+            pass
+    new_req = handler.redirect_request(
+        req, FP(), 302, 'Found', headers, 'https://image.pollinations.ai/prompt/cat?seed=2')
+    assert new_req is not None
+    assert new_req.full_url == 'https://image.pollinations.ai/prompt/cat?seed=2'
+
+
+def test_hostile_redirect_is_refused():
+    handler = core._AllowlistedRedirect()
+    with pytest.raises(ValueError, match='refusing to fetch'):
+        handler.redirect_request(None, None, 302, 'Found', {},
+                                 'https://image.pollinations.ai@evil.com/x')
 
 
 # --- hostile / malformed Claude output ---
@@ -95,8 +112,10 @@ def test_story_endpoint_survives_every_hostile_claude_reply(client, monkeypatch)
     for raw in ['', '```', 'null', '{"a": 1', 'Sure! {"scenes": []}']:
         monkeypatch.setattr(core, 'claude', lambda *a, _r=raw, **k: _r)
         r = client.post('/api/story', json={'subject': 'cat'})
-        assert r.status_code in (200, 500)
         assert r.is_json, f'non-JSON response for Claude reply {raw!r}'
+        if r.status_code == 500:
+            # the only acceptable 500 is our own JSON error contract
+            assert 'error' in r.get_json(), f'opaque 500 for {raw!r}'
 
 
 # --- hostile client payloads ---
@@ -116,7 +135,7 @@ def test_story_endpoint_never_500s_on_hostile_subject(client, monkeypatch, paylo
     monkeypatch.setattr(core, 'claude', lambda *a, **k: '{"title": "t", "scenes": []}')
     r = client.post('/api/story', json=payload)
     assert r.is_json
-    assert r.status_code in (200, 400, 500)
+    assert r.status_code == 200, f'hostile subject {payload!r} did not degrade cleanly'
 
 
 @pytest.mark.parametrize('subject', [
@@ -140,12 +159,38 @@ def test_archive_subject_cannot_escape_the_archive_dir(client, tmp_path, subject
 def test_archive_story_rejects_non_list_scenes(client):
     for scenes in ['not-a-list', {'a': 1}, 42]:
         r = client.post('/api/archive-story', json={'subject': 's', 'scenes': scenes})
-        assert r.is_json
-        assert r.status_code in (200, 400, 500)
+        assert r.status_code == 400, f'{scenes!r} was not rejected'
+        assert r.get_json()['error']
 
 
 def test_speak_rejects_non_string_text(client):
     for text in [None, 42, {'a': 1}, ['x']]:
         r = client.post('/api/speak', json={'text': text})
-        assert r.is_json
-        assert r.status_code in (400, 500)
+        assert r.status_code == 400, f'text={text!r} was not rejected'
+        assert r.get_json()['error'] == 'no text'
+
+
+def test_chat_rejects_non_string_message(client):
+    for message in [None, 42, {'a': 1}, ['x']]:
+        r = client.post('/api/chat', json={'message': message})
+        assert r.status_code == 400, f'message={message!r} was not rejected'
+        assert r.get_json()['error'] == 'no message'
+
+
+@pytest.mark.parametrize('subject', [12345, ['a'], {'b': 1}, None, True])
+def test_archive_routes_accept_non_string_subject(client, subject):
+    """A non-string subject must degrade to the default, not raise."""
+    r = client.post('/api/archive', json={'subject': subject, 'drawing': 'aGk='})
+    assert r.status_code == 200, f'/api/archive crashed on subject={subject!r}'
+    r = client.post('/api/archive-story', json={
+        'subject': subject, 'scenes': [{'narration': 'n', 'image_prompt': 'p'}]})
+    assert r.status_code == 200, f'/api/archive-story crashed on subject={subject!r}'
+
+
+@pytest.mark.parametrize('scene', [
+    {'narration': 42, 'image_prompt': None, 'image_url': 7},
+    {'narration': ['a'], 'image_prompt': {'b': 1}},
+])
+def test_archive_story_accepts_non_string_scene_fields(client, scene):
+    r = client.post('/api/archive-story', json={'subject': 's', 'scenes': [scene]})
+    assert r.status_code == 200, f'crashed on scene={scene!r}'

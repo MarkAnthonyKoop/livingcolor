@@ -57,10 +57,10 @@ STORY_PROMPT = (
 def story():
     """Ask Claude to write a multi-scene narrative arc for the drawing."""
     data = request.get_json(silent=True) or {}
-    subject = data.get('subject', 'creature')
-    character = data.get('character', '')
-    details = data.get('details', '')
-    style = data.get('style', '')
+    subject = core.as_text(data.get('subject'), 'creature')
+    character = core.as_text(data.get('character'))
+    details = core.as_text(data.get('details'))
+    style = core.as_text(data.get('style'))
 
     char_note = f'Distinctive features: {character}. ' if character else ''
     detail_note = f'Details from the drawing: {details}. ' if details else ''
@@ -90,8 +90,8 @@ def story():
 def region_motion():
     """Ask Claude to segment the AI image into animatable regions + motion vectors."""
     data = request.get_json(silent=True) or {}
-    image_url = data.get('image_url', '')
-    subject = data.get('subject', 'object')
+    image_url = core.as_text(data.get('image_url'))
+    subject = core.as_text(data.get('subject'), 'object')
 
     if not image_url:
         return jsonify({'error': 'missing image_url'}), 400
@@ -117,9 +117,9 @@ def region_motion():
 def motion_plan():
     """Ask Claude Code to design a motion vector plan for the AI image."""
     data = request.get_json(silent=True) or {}
-    subject = data.get('subject', 'object')
-    composition = data.get('composition', '')
-    details = data.get('details', '')
+    subject = core.as_text(data.get('subject'), 'object')
+    composition = core.as_text(data.get('composition'))
+    details = core.as_text(data.get('details'))
 
     instruction = (
         f'Design a 4-second animation plan for a "{subject}". '

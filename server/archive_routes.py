@@ -16,7 +16,7 @@ def archive():
     """Save a drawing + AI output to the archive directory."""
     data = request.get_json(silent=True) or {}
     ts = datetime.now().strftime('%Y%m%d-%H%M%S-%f')[:-3]
-    subject = (data.get('subject', 'untitled') or 'untitled').replace('/', '_').replace(' ', '_')
+    subject = core.as_text(data.get('subject'), 'untitled').replace('/', '_').replace(' ', '_')
     session_dir = core.archive_dir() / f'{ts}-{subject}'
     session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -41,13 +41,13 @@ def archive():
     meta = {
         'timestamp': ts,
         'subject': subject,
-        'composition': data.get('composition', ''),
-        'details': data.get('details', ''),
-        'character': data.get('character', ''),
-        'prompt': data.get('prompt', ''),
-        'ai_message': data.get('ai_message', ''),
-        'mode': data.get('mode', 'reimagine'),
-        'style': data.get('style', ''),
+        'composition': core.as_text(data.get('composition')),
+        'details': core.as_text(data.get('details')),
+        'character': core.as_text(data.get('character')),
+        'prompt': core.as_text(data.get('prompt')),
+        'ai_message': core.as_text(data.get('ai_message')),
+        'mode': core.as_text(data.get('mode'), 'reimagine'),
+        'style': core.as_text(data.get('style')),
     }
     (session_dir / 'meta.json').write_text(json.dumps(meta, indent=2))
     saved.append('meta.json')
@@ -59,8 +59,8 @@ def archive():
 def archive_story():
     """Save a generated story arc to the current session's archive folder."""
     data = request.get_json(silent=True) or {}
-    subject = (data.get('subject', 'untitled') or 'untitled').replace('/', '_').replace(' ', '_')
-    title = data.get('title', 'Story')
+    subject = core.as_text(data.get('subject'), 'untitled').replace('/', '_').replace(' ', '_')
+    title = core.as_text(data.get('title'), 'Story')
     scenes = data.get('scenes', [])
     if not scenes or not isinstance(scenes, list):
         return jsonify({'error': 'no scenes'}), 400
@@ -89,8 +89,8 @@ def archive_story():
         'title': title,
         'subject': subject,
         'scenes': [{
-            'narration': s.get('narration', ''),
-            'image_prompt': s.get('image_prompt', ''),
+            'narration': core.as_text(s.get('narration')),
+            'image_prompt': core.as_text(s.get('image_prompt')),
             'hold_ms': s.get('hold_ms', 4000),
         } for s in scenes],
     }, indent=2))
