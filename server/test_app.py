@@ -6,12 +6,13 @@ import json
 
 import pytest
 
+from server import core
 from server import app as appmod
 
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    monkeypatch.setattr(appmod, 'archive_dir', lambda: tmp_path)
+    monkeypatch.setattr(core, 'archive_dir', lambda: tmp_path)
     appmod.app.config['TESTING'] = True
     with appmod.app.test_client() as c:
         yield c
@@ -27,12 +28,12 @@ def client(tmp_path, monkeypatch):
     '  {"a": 1}  ',
 ])
 def test_parse_claude_json_variants(raw):
-    assert appmod.parse_claude_json(raw) == {'a': 1}
+    assert core.parse_claude_json(raw) == {'a': 1}
 
 
 def test_parse_claude_json_invalid_raises():
     with pytest.raises(json.JSONDecodeError):
-        appmod.parse_claude_json('not json at all')
+        core.parse_claude_json('not json at all')
 
 
 # --- fetch_image ---
@@ -46,7 +47,7 @@ def test_parse_claude_json_invalid_raises():
 ])
 def test_fetch_image_refuses_disallowed(url):
     with pytest.raises(ValueError, match='refusing to fetch'):
-        appmod.fetch_image(url)
+        core.fetch_image(url)
 
 
 def test_fetch_image_allows_pollinations_and_writes_dest(tmp_path, monkeypatch):
@@ -57,9 +58,9 @@ def test_fetch_image_allows_pollinations_and_writes_dest(tmp_path, monkeypatch):
             return self
         def __exit__(self, *a):
             return False
-    monkeypatch.setattr(appmod.urllib.request, 'urlopen', lambda req, timeout: FakeResponse())
+    monkeypatch.setattr(core.urllib.request, 'urlopen', lambda req, timeout: FakeResponse())
     dest = tmp_path / 'img.jpg'
-    body = appmod.fetch_image('https://image.pollinations.ai/prompt/cat', dest)
+    body = core.fetch_image('https://image.pollinations.ai/prompt/cat', dest)
     assert body == b'jpegbytes'
     assert dest.read_bytes() == b'jpegbytes'
 
@@ -67,14 +68,14 @@ def test_fetch_image_allows_pollinations_and_writes_dest(tmp_path, monkeypatch):
 # --- /api/story ---
 
 def test_story_parses_same_line_fence(client, monkeypatch):
-    monkeypatch.setattr(appmod, 'claude', lambda *a, **k: '```json\n{"title": "T", "scenes": []}```')
+    monkeypatch.setattr(core, 'claude', lambda *a, **k: '```json\n{"title": "T", "scenes": []}```')
     r = client.post('/api/story', json={'subject': 'cat'})
     assert r.status_code == 200
     assert r.get_json()['title'] == 'T'
 
 
 def test_story_invalid_json_returns_payload_not_crash(client, monkeypatch):
-    monkeypatch.setattr(appmod, 'claude', lambda *a, **k: 'sorry, no JSON here')
+    monkeypatch.setattr(core, 'claude', lambda *a, **k: 'sorry, no JSON here')
     r = client.post('/api/story', json={'subject': 'cat'})
     assert r.status_code == 500
     body = r.get_json()
@@ -85,7 +86,7 @@ def test_story_invalid_json_returns_payload_not_crash(client, monkeypatch):
 def test_story_decode_error_inside_claude_no_unboundlocal(client, monkeypatch):
     def boom(*a, **k):
         raise json.JSONDecodeError('bad', 'doc', 0)
-    monkeypatch.setattr(appmod, 'claude', boom)
+    monkeypatch.setattr(core, 'claude', boom)
     r = client.post('/api/story', json={'subject': 'cat'})
     assert r.status_code == 500
     assert r.get_json()['raw'] == ''  # handler must not raise UnboundLocalError
