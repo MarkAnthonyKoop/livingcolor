@@ -52,6 +52,25 @@ def fetch_image(url, dest=None, timeout=60):
     return body
 
 
+def make_session_dir(base, name):
+    """Create base/name, adding -1, -2… if it already exists, and return it.
+
+    The timestamp in `name` has millisecond resolution, so two requests landing
+    in the same millisecond would otherwise share a directory and overwrite each
+    other's files. mkdir(exist_ok=False) is atomic, so the loop is race-free
+    across gunicorn's threads and workers.
+    """
+    candidate = base / name
+    suffix = 0
+    while True:
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        except FileExistsError:
+            suffix += 1
+            candidate = base / f'{name}-{suffix}'
+
+
 def as_text(value, default=''):
     """Client JSON may carry any type where we expect a string. Return a stripped
     string, falling back to default for None/non-str — never raise."""

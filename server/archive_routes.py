@@ -17,8 +17,7 @@ def archive():
     data = request.get_json(silent=True) or {}
     ts = datetime.now().strftime('%Y%m%d-%H%M%S-%f')[:-3]
     subject = core.as_text(data.get('subject'), 'untitled').replace('/', '_').replace(' ', '_')
-    session_dir = core.archive_dir() / f'{ts}-{subject}'
-    session_dir.mkdir(parents=True, exist_ok=True)
+    session_dir = core.make_session_dir(core.archive_dir(), f'{ts}-{subject}')
 
     saved = []
 
@@ -70,8 +69,7 @@ def archive_story():
     # Find or create the latest session dir for this subject (or make a new one)
     base = core.archive_dir()
     ts = datetime.now().strftime('%Y%m%d-%H%M%S-%f')[:-3]
-    story_dir = base / f'{ts}-story-{subject}'
-    story_dir.mkdir(parents=True, exist_ok=True)
+    story_dir = core.make_session_dir(base, f'{ts}-story-{subject}')
 
     saved = []
     for i, scene in enumerate(scenes):
