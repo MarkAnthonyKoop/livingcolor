@@ -7,7 +7,16 @@ import { makeAlive } from './living.js';
 import { animateRegions } from './regions.js';
 import { playStory } from './story.js';
 
+// Bumped by cancelAnimateFlow(); a running chain re-checks after every await
+// so a stop can't be outrun by an in-flight fetch.
+let flowEpoch = 0;
+
+export function cancelAnimateFlow() {
+  flowEpoch++;
+}
+
 export async function applyLivingToLastImage() {
+  const epoch = flowEpoch;
   const imgs = document.querySelectorAll('.chat-bubble img');
   if (imgs.length === 0) return;
   const lastImg = imgs[imgs.length - 1];
@@ -21,7 +30,7 @@ export async function applyLivingToLastImage() {
     try {
       logStep('Writing your story...');
       const ok = await playStory(lastImg, subject, info);
-      if (ok) return;
+      if (ok || epoch !== flowEpoch) return;
     } catch (e) {
       log('story', 'fatal, falling back to regions', { error: e.message });
     }
@@ -36,6 +45,7 @@ export async function applyLivingToLastImage() {
         body: JSON.stringify({ image_url: lastImg.src, subject }),
         signal: AbortSignal.timeout(60000),
       });
+      if (epoch !== flowEpoch) return;
       if (res.ok) {
         const plan = await res.json();
         log('regions', 'plan received', { count: plan.regions?.length });
@@ -63,6 +73,7 @@ export async function applyLivingToLastImage() {
         }),
         signal: AbortSignal.timeout(45000),
       });
+      if (epoch !== flowEpoch) return;
       if (res.ok) {
         plan = await res.json();
         log('motion', 'plan received', { layers: plan.layers?.length });
@@ -72,6 +83,7 @@ export async function applyLivingToLastImage() {
     }
   }
 
+  if (epoch !== flowEpoch) return;
   const start = () => makeAlive(lastImg, plan);
   if (lastImg.complete) start();
   else lastImg.addEventListener('load', start, { once: true });

@@ -20,6 +20,7 @@ export function stopSpeaking() {
   speakEpoch++;
   if (currentAudio) {
     currentAudio.pause();
+    if (currentAudio._blobUrl) URL.revokeObjectURL(currentAudio._blobUrl);
     currentAudio.src = '';
     currentAudio = null;
   }
@@ -58,6 +59,7 @@ export async function speak(text) {
     if (epoch !== speakEpoch) return;  // cancelled while the request was in flight
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio._blobUrl = url;  // so stopSpeaking() can revoke it if we're interrupted
     currentAudio = audio;
     audio.addEventListener('ended', () => URL.revokeObjectURL(url));
     await audio.play();

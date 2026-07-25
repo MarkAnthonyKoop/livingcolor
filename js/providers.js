@@ -24,7 +24,15 @@ export async function recognizeDrawing() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.message) return { message: data.message, subject: data.subject };
+        if (data.message) {
+          return {
+            message: data.message,
+            subject: data.subject || '',
+            composition: data.composition || '',
+            details: data.details || '',
+            character: data.character || '',
+          };
+        }
       }
       logStep('Claude Code unavailable, falling back…');
     } catch (e) {

@@ -8,7 +8,7 @@ import {
   showTextInput, hideButtons, setButtonHandler, hidePlaceholder, logStep,
 } from './chat.js';
 import { recognizeDrawing, generateImage } from './providers.js';
-import { applyLivingToLastImage } from './animate-flow.js';
+import { applyLivingToLastImage, cancelAnimateFlow } from './animate-flow.js';
 import { log } from './logger.js';
 import { stopLiving } from './living.js';
 import { stopRegionAnimation } from './regions.js';
@@ -127,6 +127,8 @@ async function startGeneration(subject) {
   img.src = url;
 }
 
+let videoFallbackTimer = null;
+
 async function startVideoForChat(prompt, subject) {
   log('flow', 'starting video generation', { subject });
   let done = false;
@@ -148,7 +150,8 @@ async function startVideoForChat(prompt, subject) {
 
   // If video didn't arrive in 30s, fall back to client-side "living" effect
   if (!done) {
-    setTimeout(() => {
+    videoFallbackTimer = setTimeout(() => {
+      videoFallbackTimer = null;
       if (!done) {
         done = true;
         log('flow', 'video timeout, applying living effect');
@@ -199,8 +202,6 @@ function finishChat(subject) {
 }
 
 // Free-form chat input — visible after first interaction
-let activeAbortController = null;
-
 export function initChatInput() {
   const input = document.getElementById('chat-input');
   const sendBtn = document.getElementById('chat-send-btn');
@@ -242,11 +243,14 @@ export function initChatInput() {
 }
 
 function abortCurrentWork() {
-  if (activeAbortController) {
-    activeAbortController.abort();
-    activeAbortController = null;
+  stopStory();            // also stops narration via stopSpeaking()
+  cancelAnimateFlow();    // in-flight region/motion fetches won't apply
+  stopRegionAnimation();
+  stopLiving();
+  if (videoFallbackTimer) {
+    clearTimeout(videoFallbackTimer);
+    videoFallbackTimer = null;
   }
-  stopStory();  // also stops narration via stopSpeaking()
   removeLoading();
   logStep('Stopped. What would you like to do?');
   hideButtons();
