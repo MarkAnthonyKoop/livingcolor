@@ -3,17 +3,18 @@
 // User can toggle off via localStorage('voice_off').
 
 import { log } from './logger.js';
+import { readStored, writeStored, removeStored } from './storage.js';
 
 let currentAudio = null;
 let speakEpoch = 0;  // bumped on stopSpeaking() so in-flight speak() requests discard their result
 
 export function isVoiceEnabled() {
-  return localStorage.getItem('voice_off') !== 'true';
+  return readStored('voice_off') !== 'true';
 }
 
 export function setVoiceEnabled(enabled) {
-  if (enabled) localStorage.removeItem('voice_off');
-  else localStorage.setItem('voice_off', 'true');
+  if (enabled) removeStored('voice_off');
+  else writeStored('voice_off', 'true');
 }
 
 export function stopSpeaking() {

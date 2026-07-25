@@ -1,6 +1,7 @@
 // API key management, setup overlay, settings gear.
 
 import { GEMINI_URL } from './state.js';
+import { readStored, writeStored, removeStored } from './storage.js';
 
 // Obfuscated default key (XOR with app name)
 const _p = [13,32,12,8,61,30,7,31,34,36,33,62,59,51,25,0,51,25,12,43,33,11,61,39,66,27,52,45,10,91,2,37,53,121,38,23,81,58,83];
@@ -11,11 +12,11 @@ function _dk() {
 }
 
 export function getApiKey() {
-  return localStorage.getItem('gemini_key') || _dk();
+  return readStored('gemini_key') || _dk();
 }
 
 export function setApiKey(key) {
-  localStorage.setItem('gemini_key', key.trim());
+  writeStored('gemini_key', key.trim());
 }
 
 export function showSetup(prefill) {
@@ -78,24 +79,24 @@ export function setupApiKey() {
   document.getElementById('settings-btn').addEventListener('click', () => {
     showSetup(getApiKey());
     const t = document.getElementById('use-backend-toggle');
-    if (t) t.checked = localStorage.getItem('use_backend') === 'true';
+    if (t) t.checked = readStored('use_backend') === 'true';
     const vt = document.getElementById('voice-toggle');
-    if (vt) vt.checked = localStorage.getItem('voice_off') !== 'true';
+    if (vt) vt.checked = readStored('voice_off') !== 'true';
   });
 
   const backendToggle = document.getElementById('use-backend-toggle');
   if (backendToggle) {
     backendToggle.addEventListener('change', (e) => {
-      localStorage.setItem('use_backend', e.target.checked ? 'true' : 'false');
+      writeStored('use_backend', e.target.checked ? 'true' : 'false');
     });
   }
 
   const voiceToggle = document.getElementById('voice-toggle');
   if (voiceToggle) {
-    voiceToggle.checked = localStorage.getItem('voice_off') !== 'true';
+    voiceToggle.checked = readStored('voice_off') !== 'true';
     voiceToggle.addEventListener('change', (e) => {
-      if (e.target.checked) localStorage.removeItem('voice_off');
-      else localStorage.setItem('voice_off', 'true');
+      if (e.target.checked) removeStored('voice_off');
+      else writeStored('voice_off', 'true');
     });
   }
 

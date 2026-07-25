@@ -2,6 +2,7 @@
 // story arc → per-region motion → whole-image motion plan → makeAlive.
 
 import { log } from './logger.js';
+import { readStored } from './storage.js';
 import { logStep } from './chat.js';
 import { makeAlive } from './living.js';
 import { animateRegions } from './regions.js';
@@ -20,7 +21,7 @@ export async function applyLivingToLastImage() {
   const imgs = document.querySelectorAll('.chat-bubble img');
   if (imgs.length === 0) return;
   const lastImg = imgs[imgs.length - 1];
-  const useBackend = localStorage.getItem('use_backend') === 'true';
+  const useBackend = readStored('use_backend') === 'true';
   const subject = window._lcSubject || 'object';
   const info = window._lcDrawingInfo || {};
 

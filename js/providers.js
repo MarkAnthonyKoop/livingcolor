@@ -5,13 +5,14 @@ import { getApiKey } from './setup.js';
 import { getCanvasBase64 } from './canvas.js';
 import { logStep } from './chat.js';
 import { log } from './logger.js';
+import { readStored } from './storage.js';
 
 // Try AI vision providers in order, logging each attempt
 export async function recognizeDrawing() {
   const b64 = getCanvasBase64();
   const prompt = 'You are a warm, playful AI friend talking to a young child (age 2-5) who just drew a picture. React with excitement in 1-2 short sentences. Use 1-2 emojis. Ask if you guessed right.\n\nThen on separate lines at the end, write:\nSUBJECT: <1-3 words naming what they drew>\nCOMPOSITION: <one short phrase: "full figure", "headshot", "wide scene", "close-up", "object on background", etc>\nDETAILS: <a sentence describing what they actually drew: body parts visible, action/pose, colors, positions>\nCHARACTER: <2-3 sentences capturing the drawing\'s distinctive quirks — proportions (e.g. "oblong head", "long thin arms", "tiny legs"), shapes (round/oval/square), expression/mood, posture, any unusual or charming details. These are the things that make THIS drawing unique, not just any drawing of a {subject}. Be specific and faithful to what you actually see.>';
 
-  const useBackend = localStorage.getItem('use_backend') === 'true';
+  const useBackend = readStored('use_backend') === 'true';
 
   if (useBackend) {
     logStep('Trying Claude Code (local)…');
@@ -112,7 +113,7 @@ function parseSubjectResponse(text) {
 // Generate image prompt + Pollinations URL
 export async function generateImage(subject, styleHint, composition, details, character) {
   const mode = document.getElementById('animation-mode')?.checked ? 'faithful' : 'reimagine';
-  const useBackend = localStorage.getItem('use_backend') === 'true';
+  const useBackend = readStored('use_backend') === 'true';
   let prompt;
 
   if (useBackend) {

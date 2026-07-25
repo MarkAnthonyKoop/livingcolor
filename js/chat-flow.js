@@ -10,6 +10,7 @@ import {
 import { recognizeDrawing, generateImage } from './providers.js';
 import { applyLivingToLastImage, cancelAnimateFlow } from './animate-flow.js';
 import { log } from './logger.js';
+import { readStored } from './storage.js';
 import { stopLiving } from './living.js';
 import { stopRegionAnimation } from './regions.js';
 import { playStory, stopStory } from './story.js';
@@ -166,7 +167,7 @@ async function startVideoForChat(prompt, subject) {
 
 async function archiveDrawing(subject, aiImageUrl, prompt) {
   // Only when local backend is enabled
-  if (localStorage.getItem('use_backend') !== 'true') return;
+  if (readStored('use_backend') !== 'true') return;
   try {
     const info = window._lcDrawingInfo || {};
     const styleHint = document.getElementById('style-prompt')?.value.trim() || '';

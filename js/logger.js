@@ -5,17 +5,26 @@ const MAX_ENTRIES = 500;
 
 function getLog() {
   try {
-    return JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    // A stored 'null'/'12345'/'{}' parses fine but is not an array — pushing
+    // onto it would throw and take down every logging call site.
+    const parsed = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     return [];
   }
 }
 
 function saveLog(log) {
+  if (log.length > MAX_ENTRIES) log = log.slice(-MAX_ENTRIES);
   try {
-    if (log.length > MAX_ENTRIES) log = log.slice(-MAX_ENTRIES);
     localStorage.setItem(LOG_KEY, JSON.stringify(log));
-  } catch (e) { /* localStorage full */ }
+  } catch (e) {
+    // Full or unavailable: keep the most recent slice so logging recovers once
+    // space frees up, rather than silently dying for the rest of the session.
+    try {
+      localStorage.setItem(LOG_KEY, JSON.stringify(log.slice(-50)));
+    } catch (e2) { /* storage genuinely unavailable — carry on without it */ }
+  }
 }
 
 export function log(category, event, data) {
