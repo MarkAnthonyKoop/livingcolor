@@ -65,3 +65,69 @@ describe('playStory', () => {
     expect(imgEl.style.opacity).not.toBe('0');  // image never stranded invisible
   });
 });
+
+// R's live benchmark (2026-07-25): Pollinations averages ~13.6s per image while
+// scenes are staggered 4s apart and hold 3-5s — so playback can outrun the
+// preloader and individual scenes can miss their 20s window. Partial failure is
+// therefore the COMMON case in production, not an edge case.
+describe('partial scene failure', () => {
+  let imgEl;
+
+  beforeEach(() => {
+    imgEl = document.createElement('img');
+    vi.useFakeTimers();
+  });
+  afterEach(() => { stopStory(); vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it('plays the scenes that DID load and reports success', async () => {
+    let n = 0;
+    // fail every second image, deterministically by call order
+    class EverySecondFails {
+      set src(v) {
+        this._src = v;
+        const fail = (++n % 2) === 0;
+        queueMicrotask(() => {
+          if (fail) this.onerror && this.onerror(new Error('flaky'));
+          else { this.naturalWidth = 768; this.onload && this.onload(); }
+        });
+      }
+      get src() { return this._src; }
+    }
+    vi.stubGlobal('Image', EverySecondFails);
+    vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve(
+      url === '/api/story'
+        ? { ok: true, json: () => Promise.resolve(SCENES) }
+        : { ok: true, json: () => Promise.resolve({}) })));
+
+    const p = playStory(imgEl, 'cat', {});
+    await vi.advanceTimersByTimeAsync(180000);
+
+    // at least one scene displayed → success, so the caller does NOT fall back
+    // and clobber a partially-played story
+    expect(await p).toBe(true);
+    expect(imgEl.src).toBeTruthy();
+    expect(imgEl.style.opacity).not.toBe('0');
+  });
+
+  it('a scene that never resolves is skipped without stalling the rest', async () => {
+    let call = 0;
+    class SecondHangs {
+      set src(v) {
+        this._src = v;
+        const hangs = (++call === 2);   // scene 2 never fires either handler
+        if (hangs) return;
+        queueMicrotask(() => { this.naturalWidth = 768; this.onload && this.onload(); });
+      }
+      get src() { return this._src; }
+    }
+    vi.stubGlobal('Image', SecondHangs);
+    vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve(
+      url === '/api/story'
+        ? { ok: true, json: () => Promise.resolve(SCENES) }
+        : { ok: true, json: () => Promise.resolve({}) })));
+
+    const p = playStory(imgEl, 'cat', {});
+    await vi.advanceTimersByTimeAsync(300000);
+    expect(await p).toBe(true);          // hung scene skipped after its 20s race
+  });
+});
