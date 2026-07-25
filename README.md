@@ -67,7 +67,12 @@ livingcolor/
     setup.js                — API key management + backend toggle + settings overlay
     generate.js             — wraps startChatFlow as the main entry
     chat.js                 — chat UI rendering (bubbles, buttons, emoji grid)
-    chat-flow.js            — conversational flow, fallback chains, free-form input
+    chat-flow.js            — conversational flow orchestration, free-form input
+    providers.js            — AI provider calls (recognition, prompt generation)
+    animate-flow.js         — animation fallback chain (story → regions → motion plan)
+    story.js                — story-arc playback (scenes, crossfades, narration)
+    voice.js                — TTS via /api/speak (epoch-guarded cancellation)
+    regions.js              — per-region animation from Claude segmentation
     morph.js                — sketch capture + particle dissolve animation
     living.js               — breathing + sparkles + tilt effect on still images
     video.js                — Veo generation and polling
@@ -75,8 +80,13 @@ livingcolor/
     particles.js            — magic particle effect (final fallback)
     logger.js               — persistent conversation log in localStorage
   server/
-    app.py                  — Flask backend (optional): Claude Code + drawing archive
-  tests/                    — 42 unit tests (state, setup, canvas, fill, flood-fill)
+    app.py                  — thin Flask shell: static + blueprint registration
+    core.py                 — config, claude() CLI wrapper, fetch_image allowlist, parse_claude_json
+    ai_routes.py            — /api/recognize, /api/chat, /api/generate-prompt, /api/animate-prompt, /api/speak
+    motion_routes.py        — /api/story, /api/region-motion, /api/motion-plan
+    archive_routes.py       — /api/archive, /api/archive-story, /api/archive/config
+    test_app.py             — 19 pytest tests (helpers + endpoint contracts, claude/urlopen mocked)
+  tests/                    — 51 vitest tests (state, setup, canvas, fill, flood-fill, story)
   vitest.config.js
   package.json
 ```
@@ -91,7 +101,11 @@ app.js (orchestrator)
 ├── setup.js                ← state
 ├── generate.js             ← chat-flow
 ├── chat.js                 ← state
-├── chat-flow.js            ← state, canvas, setup, video, morph, living, chat, logger
+├── chat-flow.js            ← state, canvas, video, chat, providers, animate-flow, living, regions, story, logger
+├── providers.js            ← state, setup, canvas, chat, logger
+├── animate-flow.js         ← chat, living, regions, story, logger
+├── story.js                ← state, voice, logger
+├── voice.js                ← logger
 ├── morph.js                ← state, canvas
 ├── living.js               ← logger
 ├── video.js                ← state, canvas, setup, storyboard, particles, logger
@@ -108,6 +122,16 @@ app.js (orchestrator)
 - **API key obfuscation** — XOR encoding in setup.js avoids GitHub secret scanners
 - **`referrerpolicy="no-referrer"`** on Pollinations images — they reject requests with a Referer header
 - **Cross-origin fetch** uses `gradio_client` CDN for LTX, direct fetch for everything else
+
+### Status (2026-07-24)
+- 🚀 **Deployed**: https://livingcolor.cc.middlematter.com (Hetzner box, Caddy TLS, systemd; see
+  `docs/DEPLOY_remote_server.md` + `~/claude/remote_server/`)
+- ✅ Security hardening verified in prod: all client-URL fetches allowlisted (SSRF closed); no
+  third-party API keys in client JS (chat/vision/TTS are server-side)
+- ✅ Stop/cancel correctness: Escape or "stop" halts story + narration; no stale TTS; no phantom archives
+- ✅ Suites: 51/51 vitest + 19/19 pytest; live smoke + health monitor run from `remote_server`
+- ✅ File-size caps met: server split into blueprints, chat-flow split into modules (2026-07-24)
+- 📝 Two-agent build/deploy flow documented in `docs/AGENT_COLLAB.md`
 
 ### Status (2026-05-28)
 - ✅ Drawing tools (all working)
