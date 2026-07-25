@@ -27,9 +27,13 @@ export function resizeCanvas() {
 export function getPos(e) {
   const canvas = getCanvas();
   const rect = canvas.getBoundingClientRect();
+  // rect can be 0x0 before layout, in a hidden tab, or mid-orientation-change;
+  // dividing by it yields NaN/Infinity coordinates that silently draw nothing.
+  const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+  const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
   return {
-    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
   };
 }
 
