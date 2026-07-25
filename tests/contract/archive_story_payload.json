@@ -1,0 +1,19 @@
+{
+  "_comment": "THE CONTRACT between js/story.js (producer) and server/archive_routes.py (consumer). Both test suites read this file: the JS suite asserts the client emits exactly this shape, the Python suite asserts the server accepts it and stores every field. Change this file only when deliberately changing the API — a drift on either side then fails on both sides at once.",
+  "subject": "happy green doggy",
+  "title": "Boing the Bouncy Dog's Big Adventure",
+  "scenes": [
+    {
+      "narration": "Boing the bouncy dog wakes up in a sunny meadow!",
+      "image_prompt": "a cheerful green oval dog with an orange nose in a meadow",
+      "image_url": "https://image.pollinations.ai/prompt/a%20cheerful%20green%20oval%20dog?width=768&height=768&seed=12345&nologo=true",
+      "hold_ms": 4000
+    },
+    {
+      "narration": "He spots a glowing butterfly and chases it over the hill!",
+      "image_prompt": "the same green oval dog chasing a glowing butterfly uphill",
+      "image_url": "https://image.pollinations.ai/prompt/the%20same%20green%20oval%20dog?width=768&height=768&seed=12345&nologo=true",
+      "hold_ms": 3500
+    }
+  ]
+}
