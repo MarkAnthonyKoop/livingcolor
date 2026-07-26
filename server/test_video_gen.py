@@ -1,0 +1,127 @@
+"""Tests for the shot-based video pipeline (no network, no API key)."""
+import time
+
+import pytest
+
+from server import video_gen as vg
+
+
+# --- shot list from a story -------------------------------------------------
+
+STORY = {
+    'title': 'T',
+    'scenes': [
+        {'image_prompt': 'a cat on a hill', 'narration': 'n1', 'hold_ms': 4000},
+        {'image_prompt': 'the cat leaps', 'narration': 'n2', 'hold_ms': 4000},
+    ],
+}
+
+
+def test_shots_from_story_maps_scenes_to_shots():
+    shots = vg.shots_from_story(STORY, reference_image='b64', duration_s=6)
+    assert [s.prompt for s in shots] == ['a cat on a hill', 'the cat leaps']
+    assert all(s.duration_s == 6 and s.reference_image == 'b64' for s in shots)
+    assert shots[0].narration == 'n1'
+
+
+@pytest.mark.parametrize('story', [
+    None, {}, {'scenes': None}, {'scenes': 'text'}, {'scenes': [None]},
+    {'scenes': [{'image_prompt': 12345}]},          # non-string prompt
+    {'scenes': [{'image_prompt': '   '}]},          # blank prompt
+    {'scenes': [{'narration': 'no prompt'}]},
+])
+def test_shots_from_story_rejects_malformed_input(story):
+    assert vg.shots_from_story(story) == []
+
+
+def test_shot_serializes_without_leaking_reference_bytes():
+    d = vg.Shot('p', 8, reference_image='SECRETB64').to_dict()
+    assert d['has_reference'] is True
+    assert 'SECRETB64' not in str(d)
+
+
+# --- provider selection -----------------------------------------------------
+
+def test_no_key_means_unavailable_and_a_clear_error(monkeypatch):
+    monkeypatch.delenv('VEO_API_KEY', raising=False)
+    monkeypatch.delenv('GOOGLE_API_KEY', raising=False)
+    p = vg.VeoProvider()
+    assert p.available() is False
+    with pytest.raises(vg.ProviderUnavailable, match='VEO_API_KEY'):
+        p.render(vg.Shot('x'))
+
+
+def test_provider_is_selectable_by_env(monkeypatch):
+    monkeypatch.setenv('LIVINGCOLOR_VIDEO_PROVIDER', 'runway')
+    assert vg.get_provider().name == 'runway'
+    monkeypatch.setenv('LIVINGCOLOR_VIDEO_PROVIDER', 'veo')
+    assert vg.get_provider().name == 'veo'
+    assert vg.get_provider('runway').name == 'runway'
+
+
+def test_unknown_provider_degrades_to_unavailable(monkeypatch):
+    monkeypatch.setenv('LIVINGCOLOR_VIDEO_PROVIDER', 'nonesuch')
+    assert vg.get_provider().available() is False
+
+
+# --- job queue --------------------------------------------------------------
+
+class FakeProvider(vg.BaseProvider):
+    name = 'fake'
+
+    def __init__(self, fail_on=None):
+        self.fail_on = fail_on or set()
+        self.calls = []
+
+    def available(self):
+        return True
+
+    def render(self, shot):
+        self.calls.append(shot.prompt)
+        if shot.prompt in self.fail_on:
+            raise RuntimeError('render exploded')
+        return b'mp4:' + shot.prompt.encode()
+
+
+def _await(job_id, timeout=3):
+    end = time.time() + timeout
+    while time.time() < end:
+        st = vg.job_status(job_id)
+        if st['state'] in ('done', 'failed'):
+            return st
+        time.sleep(0.01)
+    raise AssertionError(f'job did not settle: {vg.job_status(job_id)}')
+
+
+def test_job_renders_every_shot_and_reports_progress():
+    p = FakeProvider()
+    shots = vg.shots_from_story(STORY)
+    st = _await(vg.start_film(shots, p))
+    assert st['state'] == 'done'
+    assert st['done'] == 2 and st['clips'] == 2
+    assert p.calls == ['a cat on a hill', 'the cat leaps']
+
+
+def test_one_failed_shot_does_not_kill_the_film():
+    p = FakeProvider(fail_on={'the cat leaps'})
+    st = _await(vg.start_film(vg.shots_from_story(STORY), p))
+    assert st['state'] == 'done'          # the good shot survived
+    assert st['clips'] == 1
+    assert 'shot 2' in st['error']
+
+
+def test_all_shots_failing_marks_the_job_failed():
+    p = FakeProvider(fail_on={'a cat on a hill', 'the cat leaps'})
+    st = _await(vg.start_film(vg.shots_from_story(STORY), p))
+    assert st['state'] == 'failed'
+    assert st['clips'] == 0
+
+
+def test_status_never_returns_raw_clip_bytes():
+    st = _await(vg.start_film(vg.shots_from_story(STORY), FakeProvider()))
+    assert st['clips'] == 2                # a count, not the payload
+    assert not isinstance(st['clips'], list)
+
+
+def test_unknown_job_id_is_none():
+    assert vg.job_status('nope') is None
