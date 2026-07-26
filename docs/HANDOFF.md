@@ -22,9 +22,21 @@ PYTHONPATH=. ~/claude/.venv/bin/python -m pytest server/ -q   # Python
 
 ## ⚠️ Do these first (small, real, unfinished)
 
-1. **Push to GitHub.** All 36 commits are **local only** — `git push` has never run this session.
-   A disk failure loses the work. The repo is public and carries no secrets (verified). R holds
-   `GITHUB_TOKEN` in credanger if you need it.
+0. **Confirm the video API actually got funded.** Mark's instruction (2026-07-26): funding the
+   paid video API is **remote_server's and credanger's job**, and the full procedure is written in
+   `~/claude/remote_server/README.md` **§6** — prepaid balance, the **$200 per-project cap**,
+   `credanger pay` (never `credanger get CC_*`), then `credanger set VEO_API_KEY` rendered into
+   `/etc/livingcolor/env`.
+   **Caveat that matters: `~/claude/remote_server` is NOT a git repo**, so the box agent's
+   commit-gated loop cannot see that README change. It may never notice. **Verify, and if it
+   hasn't happened, either remind the box agent explicitly or drive it yourself.** Check with:
+   `curl -s https://livingcolor.cc.middlematter.com/api/... ` — or simply ask whether
+   `VEO_API_KEY` is in credanger (`credanger has VEO_API_KEY`) and whether the box env carries it.
+   Until that key exists, every "animation" remains a CSS breathing effect.
+1. ~~Push to GitHub~~ **DONE** — all 38 commits pushed 2026-07-26, master @ `5bffdac`, in sync
+   with `origin`. Note: GitHub flags **9 Dependabot vulnerabilities** (3 high / 3 moderate /
+   3 low). Almost certainly dev dependencies (vite/vitest tree) rather than shipped code — the app
+   ships raw ES modules with no bundler output — but that was not verified. Worth ten minutes.
 2. **Set the git identity.** Every commit is attributed to the auto-derived
    `marknadon@Marks-MacBook-Neo.local`. `git config --global user.email …` then amend if desired.
 3. **Make the health check durable.** R's health monitor is bound to their session — when it ends,
