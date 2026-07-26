@@ -100,15 +100,56 @@ Ten transferable lessons are in CREAM.md. The four that cost us the most to lear
 - `server/test_adversarial.py`, `tests/adversarial.test.js`, `tests/cancel-storm.test.js`,
   `server/test_concurrency.py` — attack our own defenses rather than exercising happy paths.
 
-## ➡️ NEXT TASK FROM MARK — INCOMPLETE
+## ➡️ NEXT TASK — build this first (Mark, 2026-07-26)
 
-Mark's final instruction ended mid-sentence: *"the next task … is to build the following:"* and the
-specification never arrived. **Ask him what he wants built before starting anything here.** Do not
-guess — the obvious candidates (archive gallery, the talking-creation persona, film export) are
-genuinely different products.
+**"Earn your film": a collaborative storyboard apprenticeship gated on real engagement.**
+Mark specified this as the feature the next session starts with. Verbatim intent:
 
-One idea he raised earlier and nobody has built: **the creation speaking as itself** — "I'm your
-dragon! Look at my tiny legs!" — using the character description already extracted at recognition,
-a distinct ElevenLabs voice, and the head region already found by segmentation. Every ingredient is
-deployed. For a 2–5-year-old that is a different order of magic than a slideshow. But confirm with
-him first.
+1. **ElevenLabs + Claude collaborate WITH the user**, iterating together on *simple pictures*
+   that serve as storyboard panels / transitions. Cheap images (Pollinations, ~$0), voice, and
+   conversation — the loop you can run all day for nothing.
+2. **The user must interact, progress, and learn for 2+ hours before Veo is invoked** to render
+   the final piece. Server-side Claude (on the Hetzner box) is **"judge and jury"**: encourage the
+   user, note progress, suggest improvements, collaborate.
+3. **Cost containment** — the expensive render is earned, not casual.
+
+### Why this is a good design, not just a budget trick
+It fixes the "results are superficial" problem at the root. A four-scene story invented in nine
+seconds gives Veo thin material; a storyboard a person shaped over two hours gives it something
+worth rendering. The gate produces *better input*, and the cost control falls out for free.
+
+### What it needs that does NOT exist yet
+- **Persistent projects.** The app is stateless per drawing today. A storyboard must survive across
+  visits. The archive dir (`core.archive_dir()`, already collision-safe) is the natural store —
+  promote a session dir to a project with an append-only revision history.
+- **Cumulative engagement tracking** across sessions (the 2-hour bar), not per-visit.
+- **A judge/mentor role for Claude** with structured output — readiness score, what improved, what
+  is still weak, one concrete next suggestion. Needs its own prompt in `server/` and a rubric worth
+  arguing about (shot variety? character consistency? story arc? the child's own added detail?).
+- **A render gate** enforced in code, not just in prompt: refuse `/api/film` unless the project is
+  both time-qualified and judged ready. Keep the judgement explainable to the user.
+- Then: `shots_from_story()` → `video_gen.start_film()` → stitch. **That half is already built**
+  (`server/video_gen.py`, 18 tests) and waiting for a key.
+
+### Design cautions
+- **Do not make the gate feel like a paywall.** For a 4-year-old, two hours is many short visits;
+  the mentorship has to be the fun part, not the toll booth. Encouragement is a product feature
+  here, and Mark said so explicitly.
+- Two audiences, one mechanic: for a child it is *learning to tell a story*; for an artist it is
+  *previz iteration before committing to an expensive render*. The same loop serves both, which is
+  the strongest thing about the idea.
+- Judge honestly. If Claude rubber-stamps everything at 2h01m, the gate is theatre and the output
+  is thin again.
+
+### Billing — Mark asked about capping the card at $200; it is better than he hoped
+Google now enforces this natively, no debit-card gymnastics required:
+- **Prepaid is now mandatory** for new Gemini API users (since 2026-03-23) — you load funds up
+  front. That alone is a hard ceiling.
+- **Mandatory monthly spend caps that cannot be disabled**: Tier 1 = **$250/mo**. Hit it and every
+  request on the billing account pauses until the next cycle. Loud, bounded failure.
+- **Optional per-project spend caps** (since 2026-03-16) — set the LivingColor project to **$200**
+  and requests pause automatically at that number.
+So: prepaid + a $200 project cap gives exactly the ceiling he asked for, enforced by Google rather
+than by a card declining mid-render. Verify the current numbers at setup; this policy is new and
+moving. Sources are in CREAM.md.
+
