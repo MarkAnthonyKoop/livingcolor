@@ -130,6 +130,15 @@ def _reference_image(revision):
     return None
 
 
+@project_bp.route('/api/film-availability', methods=['GET'])
+def film_availability():
+    """Is the movie machine plugged in? Lets the workshop tell the truth
+    about the render tier, and lets ops verify a funded key reached the box.
+    Reports presence only — never the key."""
+    provider = video_gen.get_provider()
+    return jsonify({'provider': provider.name, 'available': provider.available()})
+
+
 @project_bp.route('/api/film/<job_id>', methods=['GET'])
 def film_status(job_id):
     status = video_gen.job_status(job_id)
