@@ -151,7 +151,7 @@ def film_status(job_id):
 
 
 JOB_RE = re.compile(r'^[a-f0-9]{12}$')
-CLIP_RE = re.compile(r'^shot_\d{2}\.mp4$')
+CLIP_RE = re.compile(r'^(shot_\d{2}|film)\.mp4$')
 
 
 @project_bp.route('/api/project/<project_id>/films', methods=['GET'])
@@ -165,7 +165,9 @@ def list_films(project_id):
     if films_root.is_dir():
         for d in sorted(films_root.iterdir()):
             if d.is_dir() and JOB_RE.match(d.name):
-                clips = sorted(f.name for f in d.iterdir() if CLIP_RE.match(f.name))
+                clips = sorted(f.name for f in d.iterdir()
+                               if re.match(r'^shot_\d{2}\.mp4$', f.name))
+                stitched = (d / 'film.mp4').is_file()
                 narrations = []
                 try:
                     meta = json.loads((d / 'film.json').read_text())
@@ -175,7 +177,8 @@ def list_films(project_id):
                 except (OSError, ValueError):
                     pass
                 films.append({'job_id': d.name, 'clips': clips,
-                              'narrations': narrations})
+                              'narrations': narrations,
+                              'film': 'film.mp4' if stitched else None})
     return jsonify({'films': films})
 
 

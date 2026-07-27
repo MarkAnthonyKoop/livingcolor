@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import threading
 import time
 import urllib.error
@@ -231,10 +233,33 @@ def start_film(shots, provider=None, save_root=None):
                 _set(job_id, done=i + 1, clips=clips)
             except Exception as e:  # one bad shot shouldn't kill the film
                 _set(job_id, error=f'shot {i + 1}: {e}')
+        if save_dir is not None and clips:
+            stitch_clips(save_dir, clips)
         _set(job_id, state='done' if clips else 'failed')
 
     threading.Thread(target=run, daemon=True).start()
     return job_id
+
+
+def stitch_clips(save_dir, clip_names):
+    """Concat the shots into one film.mp4 with ffmpeg. Optional: without
+    ffmpeg (or on failure) the per-shot files stand alone and the client
+    chain-plays them — a missing stitch must never fail the film."""
+    ffmpeg = shutil.which('ffmpeg')
+    if not ffmpeg or len(clip_names) < 2:
+        return False
+    concat_list = save_dir / 'concat.txt'
+    concat_list.write_text(''.join(f"file '{save_dir / n}'\n" for n in clip_names))
+    try:
+        subprocess.run(
+            [ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', str(concat_list),
+             '-c', 'copy', str(save_dir / 'film.mp4')],
+            capture_output=True, timeout=120, check=True)
+        return True
+    except (subprocess.SubprocessError, OSError):
+        return False
+    finally:
+        concat_list.unlink(missing_ok=True)
 
 
 def job_status(job_id):

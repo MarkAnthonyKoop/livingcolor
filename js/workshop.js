@@ -255,8 +255,17 @@ export async function playFilm(jobId) {
   const films = (await res.json()).films || [];
   const film = films.find(f => f.job_id === jobId) || films[films.length - 1];
   if (!film || !film.clips.length) return;
-  const urls = film.clips.map(c =>
-    `/api/project/${encodeURIComponent(project.id)}/films/${film.job_id}/${c}`);
+  const base = `/api/project/${encodeURIComponent(project.id)}/films/${film.job_id}`;
+  if (film.film) {
+    // stitched single file — simplest possible playback, native loop
+    player.style.display = '';
+    player.loop = true;
+    player.src = `${base}/${film.film}`;
+    player.play().catch(() => {});
+    if ((film.narrations || [])[0]) speak(film.narrations.join(' '));
+    return;
+  }
+  const urls = film.clips.map(c => `${base}/${c}`);
   const narrations = film.narrations || [];
   let i = 0;
   const startClip = () => {

@@ -187,7 +187,7 @@ def test_film_earned_with_provider_starts_job(client, monkeypatch):
     # the film survived to disk and is servable — the whole point of paying
     films = client.get(f'/api/project/{pid}/films').get_json()['films']
     assert films == [{'job_id': job_id, 'clips': ['shot_01.mp4'],
-                      'narrations': ['hi']}]
+                      'narrations': ['hi'], 'film': None}]
     r = client.get(f'/api/project/{pid}/films/{job_id}/shot_01.mp4')
     assert r.status_code == 200
     assert r.mimetype == 'video/mp4'

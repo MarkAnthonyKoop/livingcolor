@@ -1,5 +1,6 @@
 """Tests for the shot-based video pipeline (no network, no API key)."""
 import time
+from pathlib import Path
 
 import pytest
 
@@ -152,3 +153,78 @@ def test_finished_jobs_evicted_beyond_cap(monkeypatch):
         assert 'active' in vg._jobs          # running jobs are never evicted
         assert job_id in vg._jobs
         vg._jobs.clear()
+
+
+# --- stitching: optional, must never fail the film ---------------------------
+
+def _render_two_shots(tmp_path, monkeypatch):
+    class P(vg.BaseProvider):
+        name = 'fake'
+        def available(self):
+            return True
+        def render(self, shot):
+            return b'clipbytes'
+    job = vg.start_film([vg.Shot('a'), vg.Shot('b')], provider=P(),
+                        save_root=tmp_path)
+    for _ in range(100):
+        s = vg.job_status(job)
+        if s and s['state'] in ('done', 'failed'):
+            return job, s
+        time.sleep(0.02)
+    raise AssertionError('job never finished')
+
+
+def test_no_ffmpeg_still_finishes_with_shots(tmp_path, monkeypatch):
+    monkeypatch.setattr(vg.shutil, 'which', lambda n: None)
+    job, s = _render_two_shots(tmp_path, monkeypatch)
+    d = tmp_path / job
+    assert s['state'] == 'done'
+    assert sorted(p.name for p in d.glob('shot_*.mp4')) == ['shot_01.mp4', 'shot_02.mp4']
+    assert not (d / 'film.mp4').exists()
+
+
+def test_ffmpeg_failure_still_finishes(tmp_path, monkeypatch):
+    monkeypatch.setattr(vg.shutil, 'which', lambda n: '/fake/ffmpeg')
+    def boom(*a, **k):
+        raise vg.subprocess.SubprocessError('exploded')
+    monkeypatch.setattr(vg.subprocess, 'run', boom)
+    job, s = _render_two_shots(tmp_path, monkeypatch)
+    assert s['state'] == 'done'
+    assert not (tmp_path / job / 'film.mp4').exists()
+    assert not (tmp_path / job / 'concat.txt').exists()   # cleaned up
+
+
+def test_stitch_invoked_on_real_path(tmp_path, monkeypatch):
+    """start_film must actually call the stitcher (stub writes the file)."""
+    calls = {}
+    monkeypatch.setattr(vg.shutil, 'which', lambda n: '/fake/ffmpeg')
+    def fake_run(cmd, **kw):
+        calls['cmd'] = cmd
+        Path(cmd[-1]).write_bytes(b'stitched')
+        return None
+    monkeypatch.setattr(vg.subprocess, 'run', fake_run)
+    job, s = _render_two_shots(tmp_path, monkeypatch)
+    assert (tmp_path / job / 'film.mp4').read_bytes() == b'stitched'
+    assert '-c' in calls['cmd'] and 'concat' in calls['cmd']
+
+
+@pytest.mark.skipif(not __import__('shutil').which('ffmpeg'),
+                    reason='ffmpeg not installed')
+def test_stitch_with_real_ffmpeg(tmp_path):
+    """Two real 0.3s clips concat into one playable film.mp4."""
+    import shutil as _sh
+    import subprocess as _sp
+    ffmpeg = _sh.which('ffmpeg')
+    d = tmp_path / 'job'
+    d.mkdir()
+    for i, color in enumerate(['red', 'blue'], 1):
+        _sp.run([ffmpeg, '-y', '-f', 'lavfi', '-i',
+                 f'color=c={color}:s=64x64:d=0.3', '-pix_fmt', 'yuv420p',
+                 str(d / f'shot_{i:02d}.mp4')], capture_output=True, check=True)
+    assert vg.stitch_clips(d, ['shot_01.mp4', 'shot_02.mp4']) is True
+    out = d / 'film.mp4'
+    assert out.stat().st_size > 0
+    probe = _sp.run([ffmpeg.replace('ffmpeg', 'ffprobe'), '-v', 'error',
+                     '-show_entries', 'format=duration', '-of', 'csv=p=0',
+                     str(out)], capture_output=True, text=True)
+    assert float(probe.stdout.strip()) > 0.5   # both clips present
