@@ -177,6 +177,15 @@ def get_provider(name=None):
 
 _jobs = {}
 _lock = threading.Lock()
+MAX_FINISHED_JOBS = 50  # finished jobs kept for polling; older ones evicted
+
+
+def _evict_finished():
+    """Drop the oldest finished jobs beyond the cap — _jobs must not grow
+    forever on a long-lived worker. Callers hold _lock."""
+    done = [j for j in _jobs.values() if j['state'] in ('done', 'failed')]
+    for job in done[:max(0, len(done) - MAX_FINISHED_JOBS)]:
+        del _jobs[job['id']]
 
 
 def _set(job_id, **fields):
@@ -191,6 +200,7 @@ def start_film(shots, provider=None):
     provider = provider or get_provider()
     job_id = uuid.uuid4().hex[:12]
     with _lock:
+        _evict_finished()
         _jobs[job_id] = {'id': job_id, 'state': 'queued', 'provider': provider.name,
                          'total': len(shots), 'done': 0, 'clips': [], 'error': None}
 

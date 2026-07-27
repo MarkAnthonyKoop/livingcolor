@@ -125,3 +125,30 @@ def test_status_never_returns_raw_clip_bytes():
 
 def test_unknown_job_id_is_none():
     assert vg.job_status('nope') is None
+
+
+# --- job eviction: _jobs must not grow forever ------------------------------
+
+def test_finished_jobs_evicted_beyond_cap(monkeypatch):
+    """Eviction must happen on the real path (start_film), not just exist."""
+    monkeypatch.setattr(vg, 'MAX_FINISHED_JOBS', 3)
+    with vg._lock:
+        vg._jobs.clear()
+        for i in range(6):
+            vg._jobs[f'old{i}'] = {'id': f'old{i}', 'state': 'done', 'clips': []}
+        vg._jobs['active'] = {'id': 'active', 'state': 'rendering', 'clips': []}
+
+    class NoopProvider(vg.BaseProvider):
+        def available(self):
+            return True
+        def render(self, shot):
+            return b'x'
+
+    job_id = vg.start_film([], provider=NoopProvider())
+    with vg._lock:
+        finished = [j for j in vg._jobs.values()
+                    if j['state'] == 'done' and j['id'].startswith('old')]
+        assert len(finished) == 3            # start_film evicted the overflow
+        assert 'active' in vg._jobs          # running jobs are never evicted
+        assert job_id in vg._jobs
+        vg._jobs.clear()
