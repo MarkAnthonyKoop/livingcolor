@@ -23,6 +23,7 @@ function mountDom() {
       <p id="workshop-machine"></p>
       <div id="workshop-mentor"></div>
       <div id="workshop-panels"></div>
+      <video id="workshop-film" style="display:none"></video>
       <button id="workshop-save-btn"></button>
       <button id="workshop-review-btn"></button>
       <button id="workshop-film-btn"></button>
@@ -148,6 +149,25 @@ describe('saving', () => {
       expect(document.getElementById('workshop-mentor').textContent).toMatch(/saved/i));
     const save = calls.find(c => c.key.includes('/storyboard'));
     expect(save.body.panels[0].prompt).toBe('a brave cat');
+  });
+});
+
+describe('film playback', () => {
+  it('plays the rendered shots from the project films API', async () => {
+    stubServer({
+      [`GET /api/project/${PID}/films`]: {
+        status: 200,
+        body: { films: [{ job_id: 'c'.repeat(12), clips: ['shot_01.mp4', 'shot_02.mp4'] }] },
+      },
+    });
+    await openWorkshop();
+    const mod = await import('../js/workshop.js');
+    window.HTMLMediaElement.prototype.play = vi.fn(async () => {});
+    await mod.playFilm('c'.repeat(12));
+    const player = document.getElementById('workshop-film');
+    expect(player.style.display).not.toBe('none');
+    const path = new URL(player.src, 'http://localhost/').pathname;
+    expect(path).toBe(`/api/project/${PID}/films/${'c'.repeat(12)}/shot_01.mp4`);
   });
 });
 

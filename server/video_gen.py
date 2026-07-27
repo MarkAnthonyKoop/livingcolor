@@ -195,21 +195,39 @@ def _set(job_id, **fields):
             job.update(fields)
 
 
-def start_film(shots, provider=None):
-    """Kick off rendering; returns a job id to poll."""
+def start_film(shots, provider=None, save_root=None):
+    """Kick off rendering; returns a job id to poll.
+
+    With save_root (a pathlib.Path), each finished clip is written to
+    save_root/<job_id>/shot_NN.mp4 and only the filename is kept in memory —
+    a film must survive the worker and be servable later. Without it, clip
+    bytes stay in memory (offline tests)."""
     provider = provider or get_provider()
     job_id = uuid.uuid4().hex[:12]
+    save_dir = (save_root / job_id) if save_root is not None else None
     with _lock:
         _evict_finished()
         _jobs[job_id] = {'id': job_id, 'state': 'queued', 'provider': provider.name,
-                         'total': len(shots), 'done': 0, 'clips': [], 'error': None}
+                         'total': len(shots), 'done': 0, 'clips': [], 'error': None,
+                         'dir': str(save_dir) if save_dir else None}
+    if save_dir is not None:
+        save_dir.mkdir(parents=True, exist_ok=True)
+        (save_dir / 'film.json').write_text(json.dumps({
+            'job_id': job_id, 'provider': provider.name,
+            'shots': [s.to_dict() for s in shots]}, indent=2))
 
     def run():
         _set(job_id, state='rendering')
         clips = []
         for i, shot in enumerate(shots):
             try:
-                clips.append(provider.render(shot))
+                body = provider.render(shot)
+                if save_dir is not None:
+                    name = f'shot_{i + 1:02d}.mp4'
+                    (save_dir / name).write_bytes(body)
+                    clips.append(name)
+                else:
+                    clips.append(body)
                 _set(job_id, done=i + 1, clips=clips)
             except Exception as e:  # one bad shot shouldn't kill the film
                 _set(job_id, error=f'shot {i + 1}: {e}')

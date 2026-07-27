@@ -233,13 +233,39 @@ function pollFilm(jobId) {
     const s = res.data;
     if (s.state === 'done' || s.state === 'failed') {
       clearInterval(filmTimer); filmTimer = null;
-      mentorSay(s.state === 'done'
-        ? '🎬 Your film is rendered! (' + s.clips + ' scenes)'
-        : 'The movie machine had trouble: ' + (s.error || 'unknown'), true);
+      if (s.state === 'done') {
+        mentorSay('🎬 Your film is rendered! (' + s.clips + ' scenes) Here it comes…', true);
+        playFilm(jobId);
+      } else {
+        mentorSay('The movie machine had trouble: ' + (s.error || 'unknown'), true);
+      }
     } else {
       mentorSay('Rendering scene ' + Math.min(s.done + 1, s.total) + ' of ' + s.total + '… 🎥');
     }
   }, FILM_POLL_MS);
+}
+
+// --- film playback: chain the shots back-to-back, loop the whole film ---
+
+export async function playFilm(jobId) {
+  const player = $('workshop-film');
+  if (!player || !project) return;
+  const res = await fetch(`/api/project/${encodeURIComponent(project.id)}/films`);
+  if (!res.ok) return;
+  const films = (await res.json()).films || [];
+  const film = films.find(f => f.job_id === jobId) || films[films.length - 1];
+  if (!film || !film.clips.length) return;
+  const urls = film.clips.map(c =>
+    `/api/project/${encodeURIComponent(project.id)}/films/${film.job_id}/${c}`);
+  let i = 0;
+  player.style.display = '';
+  player.onended = () => {
+    i = (i + 1) % urls.length;         // loop the film
+    player.src = urls[i];
+    player.play().catch(() => {});
+  };
+  player.src = urls[0];
+  player.play().catch(() => {});       // autoplay may need the user's tap
 }
 
 // --- progress display ---

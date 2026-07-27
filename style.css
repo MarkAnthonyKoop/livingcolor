@@ -1010,3 +1010,10 @@ footer a:hover { text-decoration: underline; }
   margin: 0.6rem 0 0.2rem;
 }
 .gallery-detail p { margin: 0.2rem 0 0.6rem; color: #555; }
+.workshop-film {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 12px;
+  margin: 0.6rem 0;
+  background: #000;
+}

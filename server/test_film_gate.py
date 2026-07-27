@@ -183,3 +183,56 @@ def test_film_earned_with_provider_starts_job(client, monkeypatch):
             break
         time.sleep(0.05)
     assert status['state'] == 'done' and status['clips'] == 1
+
+    # the film survived to disk and is servable — the whole point of paying
+    films = client.get(f'/api/project/{pid}/films').get_json()['films']
+    assert films == [{'job_id': job_id, 'clips': ['shot_01.mp4']}]
+    r = client.get(f'/api/project/{pid}/films/{job_id}/shot_01.mp4')
+    assert r.status_code == 200
+    assert r.mimetype == 'video/mp4'
+    assert r.data == b'mp4bytes'
+
+
+def test_film_clips_survive_restart(client, monkeypatch):
+    """The films listing reads disk, not the in-memory job table."""
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'x'}]})
+    _earn(client, monkeypatch, pid)
+    monkeypatch.setattr(video_gen, 'get_provider', lambda *a, **k: FakeProvider())
+    job_id = client.post(f'/api/project/{pid}/film').get_json()['job_id']
+    for _ in range(50):
+        if client.get(f'/api/film/{job_id}').get_json()['state'] == 'done':
+            break
+        time.sleep(0.05)
+    with video_gen._lock:
+        video_gen._jobs.clear()          # simulate a worker restart
+    assert client.get(f'/api/film/{job_id}').status_code == 404   # memory gone
+    films = client.get(f'/api/project/{pid}/films').get_json()['films']
+    assert films and films[0]['clips'] == ['shot_01.mp4']         # disk remains
+
+
+def test_clip_serving_refuses_symlink_escape(client, tmp_path_factory):
+    from server import projects
+    pid = client.post('/api/project', json={}).get_json()['id']
+    outside = tmp_path_factory.mktemp('outside')
+    (outside / 'shot_01.mp4').write_bytes(b'secret outside bytes')
+    films_root = projects.projects_dir() / pid / 'films'
+    films_root.mkdir(parents=True)
+    (films_root / ('b' * 12)).symlink_to(outside)
+    r = client.get(f'/api/project/{pid}/films/{"b" * 12}/shot_01.mp4')
+    assert r.status_code == 404
+    assert b'secret' not in r.data
+
+
+@pytest.mark.parametrize('job,clip', [
+    ('..', 'shot_01.mp4'),
+    ('zzzzzzzzzzzz', 'shot_01.mp4'),
+    ('a' * 12, '../project.json'),
+    ('a' * 12, 'film.json'),             # metadata is not servable
+    ('a' * 12, 'shot_1.mp4'),
+    ('a' * 12, 'shot_01.mp4.orig'),
+])
+def test_clip_serving_refuses_hostile_paths(client, job, clip):
+    pid = client.post('/api/project', json={}).get_json()['id']
+    r = client.get(f'/api/project/{pid}/films/{job}/{clip}')
+    assert r.status_code in (404, 405)

@@ -4,8 +4,9 @@ engagement heartbeats, mentor reviews, and the gated /api/film."""
 from __future__ import annotations
 
 import base64
+import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 
 from server import core, mentor, projects, video_gen
 
@@ -113,7 +114,8 @@ def film(project_id):
              for p in revision['panels'] if p.get('prompt')]
     if not shots:
         return jsonify({'error': 'storyboard has no renderable panels'}), 400
-    job_id = video_gen.start_film(shots, provider)
+    films_root = projects.projects_dir() / project_id / 'films'
+    job_id = video_gen.start_film(shots, provider, save_root=films_root)
     return jsonify({'job_id': job_id, 'shots': len(shots), 'gate': gate})
 
 
@@ -145,3 +147,36 @@ def film_status(job_id):
     if status is None:
         return jsonify({'error': 'no such job'}), 404
     return jsonify(status)
+
+
+JOB_RE = re.compile(r'^[a-f0-9]{12}$')
+CLIP_RE = re.compile(r'^shot_\d{2}\.mp4$')
+
+
+@project_bp.route('/api/project/<project_id>/films', methods=['GET'])
+def list_films(project_id):
+    """Films rendered for this project — survives server restarts because it
+    reads the disk, not the in-memory job table."""
+    if _load_or_none(project_id) is None:
+        return jsonify({'error': 'no such project'}), 404
+    films_root = projects.projects_dir() / project_id / 'films'
+    films = []
+    if films_root.is_dir():
+        for d in sorted(films_root.iterdir()):
+            if d.is_dir() and JOB_RE.match(d.name):
+                clips = sorted(f.name for f in d.iterdir() if CLIP_RE.match(f.name))
+                films.append({'job_id': d.name, 'clips': clips})
+    return jsonify({'films': films})
+
+
+@project_bp.route('/api/project/<project_id>/films/<job_id>/<clip>', methods=['GET'])
+def serve_clip(project_id, job_id, clip):
+    """Serve one rendered shot. Allowlist-first, containment-checked."""
+    if _load_or_none(project_id) is None or not JOB_RE.match(job_id) \
+            or not CLIP_RE.match(clip):
+        return jsonify({'error': 'not found'}), 404
+    base = projects.projects_dir().resolve()
+    path = (base / project_id / 'films' / job_id / clip).resolve()
+    if not path.is_relative_to(base) or not path.is_file():
+        return jsonify({'error': 'not found'}), 404
+    return send_file(path, mimetype='video/mp4', max_age=86400)
