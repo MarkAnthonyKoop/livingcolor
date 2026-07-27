@@ -4,6 +4,7 @@ engagement heartbeats, mentor reviews, and the gated /api/film."""
 from __future__ import annotations
 
 import base64
+import json
 import re
 
 from flask import Blueprint, jsonify, request, send_file
@@ -165,7 +166,16 @@ def list_films(project_id):
         for d in sorted(films_root.iterdir()):
             if d.is_dir() and JOB_RE.match(d.name):
                 clips = sorted(f.name for f in d.iterdir() if CLIP_RE.match(f.name))
-                films.append({'job_id': d.name, 'clips': clips})
+                narrations = []
+                try:
+                    meta = json.loads((d / 'film.json').read_text())
+                    narrations = [str(s.get('narration', ''))[:300]
+                                  for s in meta.get('shots', [])
+                                  if isinstance(s, dict)]
+                except (OSError, ValueError):
+                    pass
+                films.append({'job_id': d.name, 'clips': clips,
+                              'narrations': narrations})
     return jsonify({'films': films})
 
 

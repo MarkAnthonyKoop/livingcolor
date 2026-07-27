@@ -257,15 +257,19 @@ export async function playFilm(jobId) {
   if (!film || !film.clips.length) return;
   const urls = film.clips.map(c =>
     `/api/project/${encodeURIComponent(project.id)}/films/${film.job_id}/${c}`);
+  const narrations = film.narrations || [];
   let i = 0;
+  const startClip = () => {
+    player.src = urls[i];
+    player.play().catch(() => {});     // autoplay may need the user's tap
+    if (narrations[i]) speak(narrations[i]);   // the storyteller's own words
+  };
   player.style.display = '';
   player.onended = () => {
     i = (i + 1) % urls.length;         // loop the film
-    player.src = urls[i];
-    player.play().catch(() => {});
+    startClip();
   };
-  player.src = urls[0];
-  player.play().catch(() => {});       // autoplay may need the user's tap
+  startClip();
 }
 
 // --- progress display ---
