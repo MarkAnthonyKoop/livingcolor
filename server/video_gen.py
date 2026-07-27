@@ -219,13 +219,37 @@ def _write_status(job):
 
 
 def read_status(save_dir):
-    """Read a persisted job status (any worker, any process). None if the
-    job dir carries no status file."""
+    """Read a persisted job status (any worker, any process).
+
+    A job dir without status.json is by definition not a live render (live
+    renders write it from t=0), so it's safe to infer a TERMINAL status from
+    what's on disk — pre-fix and hand-copied films become self-describing
+    (R's suggestion after backfilling Boing's by hand). None only when the
+    dir carries no evidence of a film at all."""
     try:
         with open(os.path.join(save_dir, 'status.json')) as f:
             return json.load(f)
     except (OSError, ValueError):
+        pass
+    try:
+        clips = sorted(n for n in os.listdir(save_dir)
+                       if n.startswith('shot_') and n.endswith('.mp4'))
+    except OSError:
         return None
+    meta = {}
+    try:
+        with open(os.path.join(save_dir, 'film.json')) as f:
+            meta = json.load(f)
+    except (OSError, ValueError):
+        pass
+    if not clips and not meta:
+        return None
+    total = len(meta.get('shots', [])) or len(clips)
+    return {'id': meta.get('job_id', os.path.basename(str(save_dir))),
+            'state': 'done' if clips else 'failed',
+            'provider': meta.get('provider', 'unknown'),
+            'total': total, 'done': len(clips), 'clips': len(clips),
+            'error': None}
 
 
 def _set(job_id, **fields):

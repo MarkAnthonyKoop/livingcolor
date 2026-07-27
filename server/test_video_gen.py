@@ -260,3 +260,37 @@ def test_stitch_with_real_ffmpeg(tmp_path):
         return order
     order = atom_order(out)
     assert order.index('moov') < order.index('mdat'), f'not faststart: {order}'
+
+
+# --- read_status inference: pre-fix film dirs are self-describing ------------
+
+def test_read_status_infers_terminal_state_without_status_json(tmp_path):
+    """A job dir with clips but no status.json (rendered pre-fix, or copied
+    by hand) must still describe itself — live renders always write the
+    file, so absence means terminal."""
+    d = tmp_path / 'job'
+    d.mkdir()
+    (d / 'shot_01.mp4').write_bytes(b'a')
+    (d / 'shot_02.mp4').write_bytes(b'b')
+    (d / 'film.json').write_text(
+        '{"job_id": "abcabcabcabc", "provider": "veo",'
+        ' "shots": [{}, {}, {}, {}]}')
+    s = vg.read_status(d)
+    assert s == {'id': 'abcabcabcabc', 'state': 'done', 'provider': 'veo',
+                 'total': 4, 'done': 2, 'clips': 2, 'error': None}
+
+
+def test_read_status_empty_dir_is_none(tmp_path):
+    d = tmp_path / 'job'
+    d.mkdir()
+    assert vg.read_status(d) is None
+    assert vg.read_status(tmp_path / 'nonexistent') is None
+
+
+def test_read_status_prefers_the_written_file(tmp_path):
+    """When status.json exists it wins — inference is only the fallback."""
+    d = tmp_path / 'job'
+    d.mkdir()
+    (d / 'shot_01.mp4').write_bytes(b'a')
+    (d / 'status.json').write_text('{"state": "rendering", "done": 1}')
+    assert vg.read_status(d)['state'] == 'rendering'
