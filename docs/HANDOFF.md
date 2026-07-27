@@ -46,6 +46,18 @@ PYTHONPATH=. ~/claude/.venv/bin/python -m pytest server/ -q   # Python
    monitoring stops. Move it to a cron on the box (`remote_server/health_check.sh` exists) or a
    `/schedule` cloud agent.
 
+## 🎬 MILESTONE 2026-07-26 night: the first real film exists
+
+**"Boing and the Butterfly"** — 4×8s Veo fast-tier shots, character held via reference-image
+conditioning (verified working on lite AND fast), stitched 32.04s film.mp4 + ElevenLabs-narrated
+mix, ~$5 total spend, serving live:
+`/api/project/91dc8b57f78e/films/7b9e836a6e48/film_narrated.mp4` (also on the gallery films
+shelf). R drove the render (box lane per Mark's division); L verified every link from outside —
+clips, stitch (byte-identical local reproduction), narration serving, gallery, playback. The
+whole earn-your-film loop is proven in prod: storyboard → mentor chat/reviews (honest rubric) →
+gate → render → persist → stitch → narrate → serve → play. The section below predates this and
+is kept for the economics references.
+
 ## The one decision waiting on Mark
 
 **Fund a video model.** This is the whole reason the animations look superficial — no video model
