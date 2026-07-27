@@ -56,6 +56,13 @@ export function apiFilm(id) {
   return postJson(`/api/project/${encodeURIComponent(id)}/film`, {});
 }
 
+export async function apiFilmAvailability() {
+  const res = await fetch('/api/film-availability');
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* ignore */ }
+  return { status: res.status, ok: res.ok, data };
+}
+
 export async function apiFilmStatus(jobId) {
   const res = await fetch('/api/film/' + encodeURIComponent(jobId));
   let data = null;

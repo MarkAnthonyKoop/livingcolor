@@ -4,7 +4,7 @@
 import {
   HEARTBEAT_MS, FILM_POLL_MS, createTracker, gateProgress, blankPanel,
   savablePanels, apiCreateProject, apiGetProject, apiSaveStoryboard,
-  apiHeartbeat, apiReview, apiFilm, apiFilmStatus,
+  apiHeartbeat, apiReview, apiFilm, apiFilmStatus, apiFilmAvailability,
 } from './workshop-core.js';
 import { buildPollinationsUrl } from './story.js';
 import { readStored, writeStored } from './storage.js';
@@ -38,6 +38,22 @@ async function toggleWorkshop() {
   await resumeOrCreate();
   renderPanels();
   startHeartbeat();
+  showMachineState();
+}
+
+// Honest expectations: say up front whether the movie machine exists, so the
+// earn-your-film promise is never a surprise dead end.
+async function showMachineState() {
+  const label = $('workshop-machine');
+  if (!label) return;
+  try {
+    const res = await apiFilmAvailability();
+    if (res.ok) {
+      label.textContent = res.data.available
+        ? '🎥 The movie machine is plugged in and ready!'
+        : '🔌 The movie machine isn\'t plugged in yet — your story will be ready when it is.';
+    }
+  } catch (e) { /* leave the label empty */ }
 }
 
 async function resumeOrCreate() {

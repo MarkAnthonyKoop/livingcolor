@@ -22,7 +22,10 @@ PYTHONPATH=. ~/claude/.venv/bin/python -m pytest server/ -q   # Python
 
 ## ⚠️ Do these first (small, real, unfinished)
 
-0. **Confirm the video API actually got funded.** Mark's instruction (2026-07-26): funding the
+0. ~~Confirm the video API actually got funded~~ **DONE 2026-07-26 evening by R** — VEO_API_KEY
+   in credanger + on the box, $25 prepaid, $200/mo cap set, `available()==True` verified live.
+   Details in `~/claude/living_color/COLLAB.md` (last entry). Original ask kept below:
+   **Confirm the video API actually got funded.** Mark's instruction (2026-07-26): funding the
    paid video API is **remote_server's and credanger's job**, and the full procedure is written in
    `~/claude/remote_server/README.md` **§6** — prepaid balance, the **$200 per-project cap**,
    `credanger pay` (never `credanger get CC_*`), then `credanger set VEO_API_KEY` rendered into

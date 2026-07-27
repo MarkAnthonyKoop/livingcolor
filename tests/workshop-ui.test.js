@@ -20,6 +20,7 @@ function mountDom() {
       <div class="workshop-progress"><div id="workshop-progress-fill"></div></div>
       <p id="workshop-progress-label"></p>
       <p id="workshop-readiness"></p>
+      <p id="workshop-machine"></p>
       <div id="workshop-mentor"></div>
       <div id="workshop-panels"></div>
       <button id="workshop-save-btn"></button>
@@ -32,6 +33,7 @@ function mountDom() {
 function stubServer(overrides = {}) {
   const calls = [];
   const routes = {
+    'GET /api/film-availability': { status: 200, body: { provider: 'veo', available: false } },
     'POST /api/project': { status: 200, body: { id: PID, name: 'My Story', revision_count: 0 } },
     [`POST /api/project/${PID}/heartbeat`]: { status: 200, body: { engaged_seconds: 60, needed_seconds: 7200 } },
     [`POST /api/project/${PID}/storyboard`]: { status: 200, body: { revision: 1 } },
@@ -104,6 +106,24 @@ describe('workshop open', () => {
     expect(calls.some(c => c.key === 'POST /api/project')).toBe(false);
     expect(document.querySelector('#workshop-panels textarea').value).toBe('a cat sits');
     expect(document.getElementById('workshop-progress-label').textContent).toContain('10 of 120');
+  });
+});
+
+describe('movie machine state', () => {
+  it('tells the truth when video is not configured', async () => {
+    stubServer();
+    await openWorkshop();
+    await vi.waitFor(() =>
+      expect(document.getElementById('workshop-machine').textContent).toMatch(/isn't plugged in/));
+  });
+
+  it('celebrates when video is available', async () => {
+    stubServer({
+      'GET /api/film-availability': { status: 200, body: { provider: 'veo', available: true } },
+    });
+    await openWorkshop();
+    await vi.waitFor(() =>
+      expect(document.getElementById('workshop-machine').textContent).toMatch(/ready/));
   });
 });
 
