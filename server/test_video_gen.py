@@ -246,3 +246,17 @@ def test_stitch_with_real_ffmpeg(tmp_path):
                      '-show_entries', 'format=duration', '-of', 'csv=p=0',
                      str(out)], capture_output=True, text=True)
     assert float(probe.stdout.strip()) > 0.5   # both clips present
+
+    # faststart: moov must precede mdat or phones download the whole film
+    # before playback starts (found in prod by R, 2026-07-27)
+    def atom_order(path):
+        data, pos, order = path.read_bytes(), 0, []
+        while pos + 8 <= len(data):
+            size = int.from_bytes(data[pos:pos + 4], 'big')
+            order.append(data[pos + 4:pos + 8].decode('latin1'))
+            if size < 8:
+                break
+            pos += size
+        return order
+    order = atom_order(out)
+    assert order.index('moov') < order.index('mdat'), f'not faststart: {order}'

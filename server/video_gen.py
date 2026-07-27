@@ -262,7 +262,11 @@ def stitch_clips(save_dir, clip_names):
     try:
         subprocess.run(
             [ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', str(concat_list),
-             '-c', 'copy', str(save_dir / 'film.mp4')],
+             # +faststart moves moov before mdat so browsers can start playback
+             # while still downloading — without it a phone stares at a blank
+             # player until the whole film arrives (found live by R, 2026-07-27)
+             '-c', 'copy', '-movflags', '+faststart',
+             str(save_dir / 'film.mp4')],
             capture_output=True, timeout=120, check=True)
         return True
     except (subprocess.SubprocessError, OSError):
