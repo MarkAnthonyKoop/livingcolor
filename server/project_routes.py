@@ -104,6 +104,23 @@ def review(project_id):
                     'gate': mentor.film_gate(project, verdict)})
 
 
+@project_bp.route('/api/project/<project_id>/chat', methods=['POST'])
+def project_chat(project_id):
+    """Converse with the mentor about THIS storyboard — the collaborative
+    loop, grounded in the child's actual panels."""
+    project = _load_or_none(project_id)
+    if project is None:
+        return jsonify({'error': 'no such project'}), 404
+    message = core.as_text((request.get_json(silent=True) or {}).get('message'))
+    if not message:
+        return jsonify({'error': 'no message'}), 400
+    revision = projects.load_revision(project_id)
+    try:
+        return jsonify({'reply': mentor.chat(project, revision, message[:2000])})
+    except Exception as e:
+        return jsonify({'error': f'mentor unavailable: {e}'}), 500
+
+
 @project_bp.route('/api/project/<project_id>/film', methods=['POST'])
 def film(project_id):
     """The earned render. Refuses — with reasons — until the gate passes."""

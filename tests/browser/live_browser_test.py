@@ -94,10 +94,10 @@ def main() -> int:
     time.sleep(6)
     shot('01_loaded')
 
-    # The canvas occupies the left half of the window on a desktop layout.
-    # Coordinates are logical points; the drawing just needs to be *somewhere*
-    # on the canvas — the AI's charming misreads are part of the product.
-    draw_shape(430, 430)
+    # Coordinates assume the pinned {0,25,1200,875} window: canvas center
+    # ~(300, 547), Bring to Life button ~(1075, 788). The drawing just needs
+    # to be *somewhere* on the canvas — charming misreads are the product.
+    draw_shape(300, 520, 70)
     time.sleep(1)
     shot('02_drawn')
 
@@ -112,8 +112,8 @@ def main() -> int:
                     'tell application "Google Chrome" to activate'],
                    check=False, capture_output=True)   # reclaim focus
     time.sleep(1)
-    drag(430, 700, 430, 700, 1)          # focus the page
-    cc('click', '430', '760')
+    drag(300, 700, 300, 700, 1)          # focus the page
+    cc('click', '1075', '788')
     for i in range(6):
         time.sleep(15)
         shot(f'03_generating_{i}')

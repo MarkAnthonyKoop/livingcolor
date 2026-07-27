@@ -97,6 +97,24 @@ def test_review_persists_pinned_verdict(monkeypatch):
     assert projects.latest_verdict(p['id'])['readiness'] == 5
 
 
+def test_project_chat_grounds_in_the_storyboard(client, monkeypatch):
+    pid = client.post('/api/project', json={'subject': 'a cat'}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard',
+                json={'panels': [{'prompt': 'cat on a unicycle'}]})
+    seen = {}
+    def fake_claude(prompt, *a, **k):
+        seen['prompt'] = prompt
+        return 'What a wobbly ride! 🚲'
+    monkeypatch.setattr(core, 'claude', fake_claude)
+    r = client.post(f'/api/project/{pid}/chat', json={'message': 'is my story good?'})
+    assert r.get_json()['reply'] == 'What a wobbly ride! 🚲'
+    assert 'cat on a unicycle' in seen['prompt']       # grounded in THEIR panels
+    assert 'is my story good?' in seen['prompt']
+    assert client.post(f'/api/project/{pid}/chat', json={}).status_code == 400
+    assert client.post('/api/project/000000000000/chat',
+                       json={'message': 'x'}).status_code == 404
+
+
 def test_revision_history_is_fetchable(client):
     pid = client.post('/api/project', json={}).get_json()['id']
     client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'v1'}]})

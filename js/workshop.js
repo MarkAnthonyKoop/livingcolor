@@ -9,6 +9,7 @@ import {
 import { buildPollinationsUrl } from './story.js';
 import { readStored, writeStored } from './storage.js';
 import { speak } from './voice.js';
+import { attachMic } from './mic.js';
 import { log } from './logger.js';
 
 let project = null;
@@ -299,6 +300,28 @@ function showGate(gate) {
   }
 }
 
+// --- mentor chat: the collaborative loop, by keyboard or voice ---
+
+async function sendChat() {
+  const input = $('workshop-chat-input');
+  const text = (input?.value || '').trim();
+  if (!text || !project) return;
+  input.value = '';
+  mentorSay('…');
+  try {
+    const res = await fetch(`/api/project/${encodeURIComponent(project.id)}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = res.ok ? await res.json() : null;
+    if (data && data.reply) mentorSay(data.reply, true);
+    else mentorSay('I didn\'t catch that — tell me again?');
+  } catch (e) {
+    mentorSay('I couldn\'t hear you just now. Try again in a moment!');
+  }
+}
+
 // Buttons in the static HTML.
 export function wireWorkshopButtons() {
   $('workshop-save-btn')?.addEventListener('click', async () => {
@@ -306,4 +329,9 @@ export function wireWorkshopButtons() {
   });
   $('workshop-review-btn')?.addEventListener('click', askMentor);
   $('workshop-film-btn')?.addEventListener('click', requestFilm);
+  $('workshop-chat-send')?.addEventListener('click', sendChat);
+  $('workshop-chat-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+  });
+  attachMic($('workshop-mic-btn'), $('workshop-chat-input'), () => sendChat());
 }

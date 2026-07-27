@@ -1017,3 +1017,5 @@ footer a:hover { text-decoration: underline; }
   margin: 0.6rem 0;
   background: #000;
 }
+.workshop-chat-row { display: flex; margin-top: 0.8rem; }
+.mic-live { background: #ff5cad !important; }

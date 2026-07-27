@@ -100,6 +100,27 @@ def review(project, revision):
     return verdict
 
 
+CHAT_PROMPT = (
+    'You are a warm, encouraging film mentor in a storyboard workshop with a '
+    'young storyteller. Their film is about: {subject}.\n\n'
+    'Their storyboard right now:\n{panels}\n\n'
+    'They say: {message}\n\n'
+    'Reply in 1-3 short, warm sentences. Be concrete and about THEIR story — '
+    'if they ask for ideas, offer ONE specific suggestion tied to their '
+    'panels, not generic praise. Simple words, 0-2 emojis.'
+)
+
+
+def chat(project, revision, message):
+    """One conversational turn with the mentor, grounded in the storyboard."""
+    panels = _panels_text(revision) if revision else '(no panels yet)'
+    prompt = CHAT_PROMPT.format(
+        subject=project.get('subject') or project.get('name') or 'their idea',
+        panels=panels,
+        message=message)
+    return core.claude(prompt, timeout=55).strip()
+
+
 def film_gate(project, verdict):
     """Decide whether this project has earned its film. Pure function of
     stored state — no prompt involved, so it cannot be sweet-talked."""

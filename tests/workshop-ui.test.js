@@ -24,6 +24,9 @@ function mountDom() {
       <div id="workshop-mentor"></div>
       <div id="workshop-panels"></div>
       <video id="workshop-film" style="display:none"></video>
+      <button id="workshop-mic-btn"></button>
+      <input id="workshop-chat-input" />
+      <button id="workshop-chat-send"></button>
       <button id="workshop-save-btn"></button>
       <button id="workshop-review-btn"></button>
       <button id="workshop-film-btn"></button>
@@ -149,6 +152,32 @@ describe('saving', () => {
       expect(document.getElementById('workshop-mentor').textContent).toMatch(/saved/i));
     const save = calls.find(c => c.key.includes('/storyboard'));
     expect(save.body.panels[0].prompt).toBe('a brave cat');
+  });
+});
+
+describe('mentor chat', () => {
+  it('sends the message to the project chat route and shows the reply', async () => {
+    const calls = stubServer({
+      [`POST /api/project/${PID}/chat`]: {
+        status: 200, body: { reply: 'Try a close-up of the cat! 🐱' },
+      },
+    });
+    await openWorkshop();
+    const input = document.getElementById('workshop-chat-input');
+    input.value = 'what should I add?';
+    document.getElementById('workshop-chat-send').click();
+    await vi.waitFor(() =>
+      expect(document.getElementById('workshop-mentor').textContent).toContain('close-up'));
+    const chat = calls.find(c => c.key.includes('/chat'));
+    expect(chat.body.message).toBe('what should I add?');
+    expect(input.value).toBe('');           // cleared for the next thought
+  });
+
+  it('hides the mic button when the browser has no recognizer', async () => {
+    stubServer();
+    await openWorkshop();
+    // jsdom has no SpeechRecognition — attachMic must hide the button, not throw
+    expect(document.getElementById('workshop-mic-btn').style.display).toBe('none');
   });
 });
 
