@@ -151,9 +151,11 @@ def test_film_earned_but_no_provider_is_503(client, monkeypatch):
 
 def test_film_availability_reports_without_leaking(client, monkeypatch):
     monkeypatch.setenv('VEO_API_KEY', 'sk-SECRETVALUE')
+    monkeypatch.setenv('VEO_MODEL', 'veo-3.1-fast-generate-preview')
     r = client.get('/api/film-availability')
     body = r.get_json()
-    assert body == {'provider': 'veo', 'available': True}
+    assert body == {'provider': 'veo', 'available': True,
+                    'model': 'veo-3.1-fast-generate-preview'}
     assert 'SECRETVALUE' not in r.get_data(as_text=True)
     monkeypatch.delenv('VEO_API_KEY')
     monkeypatch.delenv('GOOGLE_API_KEY', raising=False)

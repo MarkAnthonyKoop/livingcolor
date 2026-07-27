@@ -80,6 +80,14 @@ def main() -> int:
     print(f'Mac idle {idle:.0f}s — starting. Screenshots → {SHOTS}')
     cc('open', 'Google Chrome')
     time.sleep(2)
+    # Pin the window to a known place and size — without this, a stray
+    # Terminal or video window under the cursor swallows the clicks and the
+    # coordinate map below is meaningless (cost us one inconclusive run).
+    subprocess.run(['osascript', '-e',
+                    'tell application "Google Chrome" to activate', '-e',
+                    'tell application "Google Chrome" to set bounds of front window '
+                    'to {0, 25, 1200, 875}'], check=False, capture_output=True)
+    time.sleep(1)
     cc('combo', 'cmd', 'l')
     cc('type', args.url)
     cc('key', 'return')
@@ -100,6 +108,10 @@ def main() -> int:
     # "Bring to Life" sits under the canvas; click by finding it visually is
     # brittle, so we use the keyboard path the app also supports.
     print('clicking Bring to Life…')
+    subprocess.run(['osascript', '-e',
+                    'tell application "Google Chrome" to activate'],
+                   check=False, capture_output=True)   # reclaim focus
+    time.sleep(1)
     drag(430, 700, 430, 700, 1)          # focus the page
     cc('click', '430', '760')
     for i in range(6):

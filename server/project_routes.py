@@ -139,7 +139,8 @@ def film_availability():
     about the render tier, and lets ops verify a funded key reached the box.
     Reports presence only — never the key."""
     provider = video_gen.get_provider()
-    return jsonify({'provider': provider.name, 'available': provider.available()})
+    return jsonify({'provider': provider.name, 'available': provider.available(),
+                    'model': getattr(provider, 'model', None)})
 
 
 @project_bp.route('/api/film/<job_id>', methods=['GET'])
