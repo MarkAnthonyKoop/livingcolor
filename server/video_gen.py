@@ -49,10 +49,16 @@ class Shot:
 def shots_from_story(story, reference_image=None, duration_s=8):
     """Turn the existing /api/story scene list into a shot list. The story
     endpoint already produces a shot breakdown — it was just being rendered as
-    stills."""
+    stills.
+
+    A top-level character_sheet (pinned visual description) is folded into
+    every shot prompt verbatim — the Boing render proved this is what holds a
+    character identical across shots, alongside reference conditioning."""
     scenes = story.get('scenes') if isinstance(story, dict) else None
     if not isinstance(scenes, list):
         return []
+    sheet = story.get('character_sheet')
+    sheet = sheet.strip() if isinstance(sheet, str) else ''
     shots = []
     for s in scenes:
         if not isinstance(s, dict):
@@ -60,8 +66,11 @@ def shots_from_story(story, reference_image=None, duration_s=8):
         prompt = s.get('image_prompt')
         if not isinstance(prompt, str) or not prompt.strip():
             continue
+        prompt = prompt.strip()
+        if sheet:
+            prompt = f'{sheet}. {prompt}'
         narration = s.get('narration') if isinstance(s.get('narration'), str) else ''
-        shots.append(Shot(prompt.strip(), duration_s, reference_image, narration))
+        shots.append(Shot(prompt, duration_s, reference_image, narration))
     return shots
 
 

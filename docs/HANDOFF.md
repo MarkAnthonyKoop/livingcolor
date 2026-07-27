@@ -42,9 +42,11 @@ PYTHONPATH=. ~/claude/.venv/bin/python -m pytest server/ -q   # Python
    low, feature unused here) closed by bumping flask 3.1.1 → 3.1.3.
 2. ~~Set the git identity~~ **DONE 2026-07-26** — `git config --global` set to Mark Nadon
    <markanthonykoop@gmail.com>.
-3. **Make the health check durable.** R's health monitor is bound to their session — when it ends,
-   monitoring stops. Move it to a cron on the box (`remote_server/health_check.sh` exists) or a
-   `/schedule` cloud agent.
+3. ~~Make the health check durable~~ **DONE 2026-07-26 night by R** — box-LOCAL self-heal cron
+   (`/etc/cron.d/livingcolor-selfheal`, every 5 min as root): local probe → one restart on
+   failure → journald tag `selfheal`; disk warning at 90%. Survives every Mac-side session.
+   Source + installer: `remote_server/selfheal_livingcolor.sh --install`. Mac-side
+   `health_check.sh` remains the richer session-bound monitor when an agent is running.
 
 ## 🎬 MILESTONE 2026-07-26 night: the first real film exists
 

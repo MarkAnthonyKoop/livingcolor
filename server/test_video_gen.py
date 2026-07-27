@@ -35,6 +35,24 @@ def test_shots_from_story_rejects_malformed_input(story):
     assert vg.shots_from_story(story) == []
 
 
+def test_character_sheet_folds_into_every_shot_prompt():
+    story = dict(STORY, character_sheet='Milo, an orange cat with one bent ear')
+    shots = vg.shots_from_story(story)
+    assert all(s.prompt.startswith('Milo, an orange cat with one bent ear. ')
+               for s in shots)
+    # the scene's own prompt survives after the pin
+    assert shots[0].prompt.endswith('a cat on a hill')
+
+
+@pytest.mark.parametrize('sheet', [None, '', '   ', 42, ['list']])
+def test_missing_or_malformed_character_sheet_changes_nothing(sheet):
+    story = dict(STORY)
+    if sheet is not None:
+        story['character_sheet'] = sheet
+    assert [s.prompt for s in vg.shots_from_story(story)] == \
+        ['a cat on a hill', 'the cat leaps']
+
+
 def test_shot_serializes_without_leaking_reference_bytes():
     d = vg.Shot('p', 8, reference_image='SECRETB64').to_dict()
     assert d['has_reference'] is True

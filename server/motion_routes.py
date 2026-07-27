@@ -48,7 +48,11 @@ STORY_PROMPT = (
     'masterpiece quality). Always include the central character\'s look so it stays consistent.\n'
     '- narration: 1 short kid-friendly sentence to be read aloud (8-15 words, excited, warm)\n'
     '- hold_ms: how long this scene should display (3000-5000ms)\n\n'
-    'Output ONLY a JSON object: {{"title": "Short title", "scenes": [{{"image_prompt": "...", "narration": "...", "hold_ms": 4000}}, ...]}}\n'
+    'Also write ONE top-level character_sheet: a 25-40 word pinned visual description of the '
+    'central character (colors, proportions, distinctive features) that a renderer can repeat '
+    'verbatim in every scene to keep the character identical across shots.\n\n'
+    'Output ONLY a JSON object: {{"title": "Short title", "character_sheet": "...", '
+    '"scenes": [{{"image_prompt": "...", "narration": "...", "hold_ms": 4000}}, ...]}}\n'
     'No markdown, no commentary.'
 )
 
