@@ -270,6 +270,36 @@ def test_film_clips_survive_restart(client, monkeypatch):
     assert films and films[0]['clips'] == ['shot_01.mp4']         # disk remains
 
 
+def test_film_status_answers_from_any_worker(client, monkeypatch):
+    """The multi-worker wrinkle: polls land on workers that never saw the
+    job. The project-scoped status route must answer from disk."""
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'x'}]})
+    _earn(client, monkeypatch, pid)
+    monkeypatch.setattr(video_gen, 'get_provider', lambda *a, **k: FakeProvider())
+    job_id = client.post(f'/api/project/{pid}/film').get_json()['job_id']
+    for _ in range(50):
+        if client.get(f'/api/film/{job_id}').get_json()['state'] == 'done':
+            break
+        time.sleep(0.05)
+
+    # same-worker path (memory)
+    r = client.get(f'/api/project/{pid}/film/{job_id}')
+    assert r.get_json()['state'] == 'done'
+
+    # other-worker path: this process has never heard of the job
+    with video_gen._lock:
+        video_gen._jobs.clear()
+    r = client.get(f'/api/project/{pid}/film/{job_id}')
+    body = r.get_json()
+    assert r.status_code == 200
+    assert body['state'] == 'done' and body['done'] == 1 and body['clips'] == 1
+
+    # unknown ids still 404 everywhere
+    assert client.get(f'/api/project/{pid}/film/{"f" * 12}').status_code == 404
+    assert client.get(f'/api/project/{pid}/film/notajob').status_code == 404
+
+
 def test_clip_serving_refuses_symlink_escape(client, tmp_path_factory):
     from server import projects
     pid = client.post('/api/project', json={}).get_json()['id']

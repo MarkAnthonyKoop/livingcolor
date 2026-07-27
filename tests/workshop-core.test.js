@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import {
   createTracker, gateProgress, savablePanels, blankPanel,
-  apiFilm, apiHeartbeat, apiSaveStoryboard,
+  apiFilm, apiHeartbeat, apiSaveStoryboard, apiFilmStatus,
 } from '../js/workshop-core.js';
 
 describe('interaction tracker', () => {
@@ -88,6 +88,13 @@ describe('API wrappers', () => {
     const fn = stubFetch(200, { revision: 1 });
     await apiSaveStoryboard('a/b evil', [{ prompt: 'x' }]);
     expect(fn.mock.calls[0][0]).toContain(encodeURIComponent('a/b evil'));
+  });
+
+  it('apiFilmStatus polls the project-scoped route (any worker can answer)', async () => {
+    const fn = stubFetch(200, { state: 'rendering', done: 1, total: 4 });
+    await apiFilmStatus('a'.repeat(12), 'b'.repeat(12));
+    const url = fn.mock.calls[0][0];
+    expect(url).toBe(`/api/project/${'a'.repeat(12)}/film/${'b'.repeat(12)}`);
   });
 
   it('a non-JSON error body does not throw', async () => {

@@ -63,8 +63,10 @@ export async function apiFilmAvailability() {
   return { status: res.status, ok: res.ok, data };
 }
 
-export async function apiFilmStatus(jobId) {
-  const res = await fetch('/api/film/' + encodeURIComponent(jobId));
+export async function apiFilmStatus(projectId, jobId) {
+  // project-scoped: any server worker can answer from disk, so polling
+  // survives multi-worker request routing
+  const res = await fetch(`/api/project/${encodeURIComponent(projectId)}/film/${encodeURIComponent(jobId)}`);
   let data = null;
   try { data = await res.json(); } catch (e) { /* ignore */ }
   return { status: res.status, ok: res.ok, data };

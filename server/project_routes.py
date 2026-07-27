@@ -184,6 +184,22 @@ JOB_RE = re.compile(r'^[a-f0-9]{12}$')
 CLIP_RE = re.compile(r'^(shot_\d{2}|film|film_narrated)\.mp4$')
 
 
+@project_bp.route('/api/project/<project_id>/film/<job_id>', methods=['GET'])
+def project_film_status(project_id, job_id):
+    """Job status that ANY gunicorn worker can answer: in-memory when this
+    worker owns the render thread, disk fallback otherwise. The project
+    scope gives the path — no cross-project scanning."""
+    if _load_or_none(project_id) is None or not JOB_RE.match(job_id):
+        return jsonify({'error': 'not found'}), 404
+    status = video_gen.job_status(job_id)
+    if status is None:
+        status = video_gen.read_status(
+            projects.projects_dir() / project_id / 'films' / job_id)
+    if status is None:
+        return jsonify({'error': 'no such job'}), 404
+    return jsonify(status)
+
+
 @project_bp.route('/api/project/<project_id>/films', methods=['GET'])
 def list_films(project_id):
     """Films rendered for this project — survives server restarts because it

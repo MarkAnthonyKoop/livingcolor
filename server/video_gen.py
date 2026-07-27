@@ -199,11 +199,41 @@ def _evict_finished():
         del _jobs[job['id']]
 
 
+def _public_status(job):
+    return {k: v for k, v in job.items() if k not in ('clips', 'dir')} | \
+        {'clips': len(job['clips'])}
+
+
+def _write_status(job):
+    """Persist the job's public status beside its clips. Gunicorn runs
+    multiple workers: the render thread lives in ONE process, but status
+    polls land on ANY — disk is the only memory they share. Atomic
+    write-then-rename so a concurrent read never sees a torn file."""
+    if not job.get('dir'):
+        return
+    path = os.path.join(job['dir'], 'status.json')
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(_public_status(job), f)
+    os.replace(tmp, path)
+
+
+def read_status(save_dir):
+    """Read a persisted job status (any worker, any process). None if the
+    job dir carries no status file."""
+    try:
+        with open(os.path.join(save_dir, 'status.json')) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
 def _set(job_id, **fields):
     with _lock:
         job = _jobs.get(job_id)
         if job:
             job.update(fields)
+            _write_status(job)
 
 
 def start_film(shots, provider=None, save_root=None):
@@ -226,6 +256,8 @@ def start_film(shots, provider=None, save_root=None):
         (save_dir / 'film.json').write_text(json.dumps({
             'job_id': job_id, 'provider': provider.name,
             'shots': [s.to_dict() for s in shots]}, indent=2))
+        with _lock:
+            _write_status(_jobs[job_id])   # visible to other workers from t=0
 
     def run():
         _set(job_id, state='rendering')
@@ -280,4 +312,4 @@ def job_status(job_id):
         job = _jobs.get(job_id)
         if not job:
             return None
-        return {k: v for k, v in job.items() if k != 'clips'} | {'clips': len(job['clips'])}
+        return _public_status(job)

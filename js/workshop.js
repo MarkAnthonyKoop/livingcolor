@@ -230,7 +230,12 @@ async function requestFilm() {
 function pollFilm(jobId) {
   if (filmTimer) clearInterval(filmTimer);
   filmTimer = setInterval(async () => {
-    const res = await apiFilmStatus(jobId);
+    let res;
+    try {
+      res = await apiFilmStatus(project.id, jobId);
+    } catch (e) {
+      return;                    // transient network blip — keep polling
+    }
     if (!res.ok) { clearInterval(filmTimer); filmTimer = null; return; }
     const s = res.data;
     if (s.state === 'done' || s.state === 'failed') {
