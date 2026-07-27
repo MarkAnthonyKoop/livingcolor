@@ -72,6 +72,29 @@ def test_gallery_survives_corrupt_meta(client, archive):
     assert body['sessions'][0]['subject'] == ''
 
 
+def test_gallery_lists_project_films(client, archive):
+    pid = 'a' * 12
+    job = 'b' * 12
+    d = archive / 'projects' / pid / 'films' / job
+    d.mkdir(parents=True)
+    (d / 'shot_01.mp4').write_bytes(b'clip')
+    (d / 'film.mp4').write_bytes(b'stitched')
+    (archive / 'projects' / pid / 'project.json').write_text(
+        json.dumps({'id': pid, 'name': 'Boing'}))
+    body = client.get('/api/gallery').get_json()
+    assert body['films'] == [{'project_id': pid, 'project_name': 'Boing',
+                              'job_id': job, 'clips': ['shot_01.mp4'],
+                              'film': 'film.mp4', 'narrated': None}]
+    # films ride only the first page — pagination doesn't repeat them
+    assert client.get('/api/gallery?offset=1').get_json()['films'] == []
+
+
+def test_gallery_films_ignore_malformed_dirs(client, archive):
+    (archive / 'projects' / 'not-a-project-id' / 'films' / 'x').mkdir(parents=True)
+    (archive / 'projects' / ('c' * 12) / 'films' / 'BADJOB').mkdir(parents=True)
+    assert client.get('/api/gallery').get_json()['films'] == []
+
+
 def test_gallery_file_serves_image(client, archive):
     make_session(archive, '20260726-120000-000-cat')
     r = client.get('/api/gallery/20260726-120000-000-cat/drawing.png')

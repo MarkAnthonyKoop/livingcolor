@@ -218,7 +218,16 @@ def test_film_earned_with_provider_starts_job(client, monkeypatch):
     # the film survived to disk and is servable — the whole point of paying
     films = client.get(f'/api/project/{pid}/films').get_json()['films']
     assert films == [{'job_id': job_id, 'clips': ['shot_01.mp4'],
-                      'narrations': ['hi'], 'film': None}]
+                      'narrations': ['hi'], 'film': None, 'narrated': None}]
+
+    # a narrated mix dropped beside the shots becomes listed and servable
+    from server import projects
+    job_dir = projects.projects_dir() / pid / 'films' / job_id
+    (job_dir / 'film_narrated.mp4').write_bytes(b'narratedbytes')
+    films = client.get(f'/api/project/{pid}/films').get_json()['films']
+    assert films[0]['narrated'] == 'film_narrated.mp4'
+    r = client.get(f'/api/project/{pid}/films/{job_id}/film_narrated.mp4')
+    assert r.status_code == 200 and r.data == b'narratedbytes'
     r = client.get(f'/api/project/{pid}/films/{job_id}/shot_01.mp4')
     assert r.status_code == 200
     assert r.mimetype == 'video/mp4'
@@ -263,6 +272,8 @@ def test_clip_serving_refuses_symlink_escape(client, tmp_path_factory):
     ('a' * 12, 'film.json'),             # metadata is not servable
     ('a' * 12, 'shot_1.mp4'),
     ('a' * 12, 'shot_01.mp4.orig'),
+    ('a' * 12, 'film_narrated.mp4.bak'),
+    ('a' * 12, 'concat.txt'),
 ])
 def test_clip_serving_refuses_hostile_paths(client, job, clip):
     pid = client.post('/api/project', json={}).get_json()['id']

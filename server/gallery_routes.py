@@ -50,9 +50,39 @@ def _session_summary(entry):
     return info
 
 
+def _list_films():
+    """Rendered films across all projects — the archive's crown jewels.
+    Served through the existing project film routes, so no new file-serving
+    surface is opened here."""
+    from server import projects  # local import avoids a cycle at module load
+    films = []
+    projects_root = core.archive_dir() / 'projects'
+    if not projects_root.is_dir():
+        return films
+    for pdir in sorted(projects_root.iterdir()):
+        films_root = pdir / 'films'
+        if not (projects.ID_RE.match(pdir.name) and films_root.is_dir()):
+            continue
+        try:
+            name = json.loads((pdir / 'project.json').read_text()).get('name', '')
+        except (OSError, ValueError):
+            name = ''
+        for d in sorted(films_root.iterdir()):
+            if d.is_dir() and re.match(r'^[a-f0-9]{12}$', d.name):
+                clips = sorted(f.name for f in d.iterdir()
+                               if re.match(r'^shot_\d{2}\.mp4$', f.name))
+                if clips:
+                    films.append({'project_id': pdir.name, 'project_name': str(name)[:200],
+                                  'job_id': d.name, 'clips': clips,
+                                  'film': 'film.mp4' if (d / 'film.mp4').is_file() else None,
+                                  'narrated': 'film_narrated.mp4'
+                                  if (d / 'film_narrated.mp4').is_file() else None})
+    return films
+
+
 @gallery_bp.route('/api/gallery', methods=['GET'])
 def gallery():
-    """Newest-first page of archived sessions."""
+    """Newest-first page of archived sessions, plus every rendered film."""
     try:
         offset = max(0, int(request.args.get('offset', 0)))
         limit = min(MAX_LIMIT, max(1, int(request.args.get('limit', 24))))
@@ -69,7 +99,8 @@ def gallery():
             page.append(_session_summary(core.archive_dir() / name))
         except OSError:
             continue  # dir vanished or unreadable — skip, don't 500 the page
-    return jsonify({'total': len(names), 'offset': offset, 'sessions': page})
+    return jsonify({'total': len(names), 'offset': offset, 'sessions': page,
+                    'films': _list_films() if offset == 0 else []})
 
 
 @gallery_bp.route('/api/gallery/<session>/<filename>', methods=['GET'])

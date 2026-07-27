@@ -181,7 +181,7 @@ def film_status(job_id):
 
 
 JOB_RE = re.compile(r'^[a-f0-9]{12}$')
-CLIP_RE = re.compile(r'^(shot_\d{2}|film)\.mp4$')
+CLIP_RE = re.compile(r'^(shot_\d{2}|film|film_narrated)\.mp4$')
 
 
 @project_bp.route('/api/project/<project_id>/films', methods=['GET'])
@@ -208,7 +208,9 @@ def list_films(project_id):
                     pass
                 films.append({'job_id': d.name, 'clips': clips,
                               'narrations': narrations,
-                              'film': 'film.mp4' if stitched else None})
+                              'film': 'film.mp4' if stitched else None,
+                              'narrated': 'film_narrated.mp4'
+                              if (d / 'film_narrated.mp4').is_file() else None})
     return jsonify({'films': films})
 
 

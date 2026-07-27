@@ -34,6 +34,7 @@ async function loadPage() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const body = await res.json();
     total = body.total;
+    if (offset === 0) (body.films || []).forEach(addFilmCard);
     body.sessions.forEach(addCard);
     offset += body.sessions.length;
   } catch (e) {
@@ -45,6 +46,45 @@ async function loadPage() {
   if (more) more.style.display = offset < total ? '' : 'none';
   const empty = $('gallery-grid').children.length === 0;
   if (empty) $('gallery-grid').textContent = 'Nothing saved yet — draw something and bring it to life!';
+}
+
+function addFilmCard(film) {
+  const card = document.createElement('button');
+  card.className = 'gallery-card gallery-film-card';
+  const label = document.createElement('span');
+  label.textContent = '🎬 ' + (film.project_name || 'A finished film');
+  card.appendChild(label);
+  card.addEventListener('click', () => showFilm(film));
+  $('gallery-grid').appendChild(card);
+}
+
+function showFilm(film) {
+  const box = $('gallery-detail');
+  box.innerHTML = '';
+  const title = document.createElement('h3');
+  title.textContent = '🎬 ' + (film.project_name || 'A finished film');
+  box.appendChild(title);
+  const base = `/api/project/${encodeURIComponent(film.project_id)}/films/${film.job_id}`;
+  const player = document.createElement('video');
+  player.controls = true;
+  player.playsInline = true;
+  player.className = 'gallery-film-player';
+  const whole = film.narrated || film.film;   // narrated mix beats silent stitch
+  if (whole) {
+    player.loop = true;
+    player.src = `${base}/${whole}`;
+  } else {
+    let i = 0;                             // no stitch — chain the shots
+    player.src = `${base}/${film.clips[0]}`;
+    player.onended = () => {
+      i = (i + 1) % film.clips.length;
+      player.src = `${base}/${film.clips[i]}`;
+      player.play().catch(() => {});
+    };
+  }
+  box.appendChild(player);
+  player.play().catch(() => {});
+  box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
 }
 
 function thumbFor(session) {

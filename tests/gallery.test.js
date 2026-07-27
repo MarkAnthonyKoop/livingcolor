@@ -22,10 +22,10 @@ const SESSIONS = [
     title: '', files: ['ai_image.jpg', 'drawing.png'], narrations: [] },
 ];
 
-function stubGallery(total = 2, sessions = SESSIONS) {
+function stubGallery(total = 2, sessions = SESSIONS, films = []) {
   const fn = vi.fn(async (url) => ({
     ok: true, status: 200,
-    json: async () => ({ total, offset: 0, sessions }),
+    json: async () => ({ total, offset: 0, sessions, films }),
   }));
   vi.stubGlobal('fetch', fn);
   return fn;
@@ -78,6 +78,25 @@ describe('gallery listing', () => {
     document.getElementById('gallery-btn').click();
     await vi.waitFor(() =>
       expect(document.getElementById('gallery-grid').textContent).toMatch(/Nothing saved/i));
+  });
+});
+
+describe('films shelf', () => {
+  const FILM = { project_id: 'a'.repeat(12), project_name: 'Boing', job_id: 'b'.repeat(12),
+                 clips: ['shot_01.mp4'], film: 'film.mp4' };
+
+  it('shows film cards first and plays the stitched film on the project route', async () => {
+    stubGallery(2, SESSIONS, [FILM]);
+    window.HTMLMediaElement.prototype.play = vi.fn(async () => {});
+    await openGallery();
+    const first = document.querySelector('.gallery-card');
+    expect(first.classList.contains('gallery-film-card')).toBe(true);
+    expect(first.textContent).toContain('Boing');
+    first.click();
+    const player = document.querySelector('#gallery-detail video');
+    const path = new URL(player.src, 'http://localhost/').pathname;
+    expect(path).toBe(`/api/project/${'a'.repeat(12)}/films/${'b'.repeat(12)}/film.mp4`);
+    expect(player.loop).toBe(true);
   });
 });
 

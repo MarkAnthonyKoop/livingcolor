@@ -1019,3 +1019,5 @@ footer a:hover { text-decoration: underline; }
 }
 .workshop-chat-row { display: flex; margin-top: 0.8rem; }
 .mic-live { background: #ff5cad !important; }
+.gallery-film-card { background: linear-gradient(135deg, #f5f2ff, #ffe9f4); font-weight: 600; }
+.gallery-film-player { width: 100%; max-width: 640px; border-radius: 12px; background: #000; display: block; margin: 0.6rem 0; }
