@@ -130,6 +130,15 @@ It fixes the "results are superficial" problem at the root. A four-scene story i
 seconds gives Veo thin material; a storyboard a person shaped over two hours gives it something
 worth rendering. The gate produces *better input*, and the cost control falls out for free.
 
+### Progress 2026-07-26 (later session): the server half EXISTS now
+`server/projects.py` (persistent projects, append-only revisions, anti-gaming engagement
+accrual), `server/mentor.py` (rubric verdicts pinned to the revision judged + the pure-code
+`film_gate`), `server/project_routes.py` (REST + gated `/api/film`). 46 tests, each defense
+mutation-tested red. Env knobs: `LIVINGCOLOR_GATE_SECONDS` (7200), `LIVINGCOLOR_GATE_READINESS`
+(7). **Still missing: the client-side workshop UI** (panel editor, mentor chat, heartbeat loop —
+nothing in `js/` calls these endpoints yet), and Veo funding (checked: `credanger has VEO_API_KEY`
+still exits 1).
+
 ### What it needs that does NOT exist yet
 - **Persistent projects.** The app is stateless per drawing today. A storyboard must survive across
   visits. The archive dir (`core.archive_dir()`, already collision-safe) is the natural store —

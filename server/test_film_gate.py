@@ -1,0 +1,174 @@
+"""Tests for the mentor verdict shape and the /api/film render gate.
+
+The gate is the product: "earn your film" is theatre unless these refusal
+paths genuinely refuse.
+
+Run:  PYTHONPATH=~/claude/livingcolor ~/claude/.venv/bin/python -m pytest server/test_film_gate.py -q
+"""
+import json
+import time
+
+import pytest
+
+from server import core, mentor, projects, video_gen
+
+
+@pytest.fixture(autouse=True)
+def sandbox(tmp_path, monkeypatch):
+    monkeypatch.setattr(core, 'archive_dir', lambda: tmp_path)
+
+
+def make_project(engaged=0, revision_count=0):
+    return {'id': 'a' * 12, 'engaged_seconds': engaged,
+            'revision_count': revision_count, 'subject': 'cat'}
+
+
+# --- film_gate: pure logic, cannot be sweet-talked ---
+
+def test_gate_refuses_without_time():
+    g = mentor.film_gate(make_project(engaged=100, revision_count=1),
+                         {'readiness': 10, 'revision': 1})
+    assert not g['allowed'] and not g['time_ok'] and g['judged_ok']
+    assert any('minutes' in r for r in g['reasons'])
+
+
+def test_gate_refuses_without_verdict():
+    g = mentor.film_gate(make_project(engaged=99999), None)
+    assert not g['allowed'] and not g['judged_ok']
+
+
+def test_gate_refuses_stale_verdict():
+    """A passing review then a storyboard edit must invalidate the pass."""
+    g = mentor.film_gate(make_project(engaged=99999, revision_count=3),
+                         {'readiness': 10, 'revision': 2})
+    assert not g['allowed']
+    assert any('changed since' in r for r in g['reasons'])
+
+
+def test_gate_refuses_low_readiness():
+    g = mentor.film_gate(make_project(engaged=99999, revision_count=1),
+                         {'readiness': 6, 'revision': 1, 'suggestion': 'add a twist'})
+    assert not g['allowed']
+    assert any('add a twist' in r for r in g['reasons'])
+
+
+def test_gate_passes_when_earned():
+    g = mentor.film_gate(make_project(engaged=99999, revision_count=1),
+                         {'readiness': 7, 'revision': 1})
+    assert g['allowed'] and g['reasons'] == []
+
+
+def test_gate_thresholds_come_from_env(monkeypatch):
+    monkeypatch.setenv('LIVINGCOLOR_GATE_SECONDS', '60')
+    monkeypatch.setenv('LIVINGCOLOR_GATE_READINESS', '9')
+    g = mentor.film_gate(make_project(engaged=61, revision_count=1),
+                         {'readiness': 8, 'revision': 1})
+    assert g['time_ok'] and not g['allowed']
+
+
+# --- verdict coercion: malformed Claude output must never open the gate ---
+
+@pytest.mark.parametrize('raw', [{}, {'readiness': 'ten'}, {'readiness': None},
+                                 {'readiness': [10]}])
+def test_bad_readiness_coerces_to_zero(raw):
+    assert mentor._coerce_verdict(raw)['readiness'] == 0
+
+
+def test_readiness_clamped_and_lists_cleaned():
+    v = mentor._coerce_verdict({'readiness': 99, 'improved': 'not a list',
+                                'weak': [1, {'x': 2}], 'suggestion': 42})
+    assert v['readiness'] == 10
+    assert v['improved'] == []
+    assert all(isinstance(w, str) for w in v['weak'])
+    assert v['suggestion'] == ''
+
+
+# --- mentor.review pins the verdict to the judged revision ---
+
+def test_review_persists_pinned_verdict(monkeypatch):
+    p = projects.create('F', 'cat')
+    projects.save_revision(p['id'], [{'prompt': 'cat sits'}])
+    projects.save_revision(p['id'], [{'prompt': 'cat flies'}])
+    monkeypatch.setattr(core, 'claude', lambda *a, **k: json.dumps(
+        {'readiness': 5, 'weak': ['no ending'], 'suggestion': 'add an ending'}))
+    verdict = mentor.review(projects.load(p['id']),
+                            projects.load_revision(p['id']))
+    assert verdict['revision'] == 2
+    assert projects.latest_verdict(p['id'])['readiness'] == 5
+
+
+# --- routes ---
+
+def test_project_lifecycle_over_http(client):
+    r = client.post('/api/project', json={'name': 'F', 'subject': 'cat'})
+    pid = r.get_json()['id']
+    r = client.post(f'/api/project/{pid}/storyboard',
+                    json={'panels': [{'prompt': 'cat sits'}]})
+    assert r.get_json()['revision'] == 1
+    r = client.get(f'/api/project/{pid}')
+    body = r.get_json()
+    assert body['gate']['allowed'] is False
+    assert body['storyboard']['panels'][0]['prompt'] == 'cat sits'
+
+
+@pytest.mark.parametrize('path', ['/api/project/{pid}', '/api/project/{pid}/film',
+                                  '/api/project/{pid}/heartbeat',
+                                  '/api/project/{pid}/review'])
+@pytest.mark.parametrize('pid', ['..%2f..%2fetc', 'zzzzzzzzzzzz', '0' * 12])
+def test_bad_ids_404_everywhere(client, path, pid):
+    url = path.format(pid=pid)
+    r = client.get(url) if url.endswith(pid) and 'film' not in url and \
+        'heartbeat' not in url and 'review' not in url else client.post(url, json={})
+    # %2f traversal decodes to a path that falls off these routes entirely
+    # (405 from the static route) — either way it must never reach a project.
+    assert r.status_code in (404, 405)
+
+
+def test_film_refuses_with_reasons(client):
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard',
+                json={'panels': [{'prompt': 'x'}]})
+    r = client.post(f'/api/project/{pid}/film')
+    assert r.status_code == 403
+    assert r.get_json()['gate']['reasons']
+
+
+def _earn(client, monkeypatch, pid):
+    """Legitimately satisfy the gate: real verdict on the current revision."""
+    monkeypatch.setenv('LIVINGCOLOR_GATE_SECONDS', '0')
+    projects.append_verdict(pid, {'readiness': 10, 'revision': 1})
+
+
+def test_film_earned_but_no_provider_is_503(client, monkeypatch):
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'x'}]})
+    _earn(client, monkeypatch, pid)
+    monkeypatch.delenv('VEO_API_KEY', raising=False)
+    monkeypatch.delenv('GOOGLE_API_KEY', raising=False)
+    r = client.post(f'/api/project/{pid}/film')
+    assert r.status_code == 503
+
+
+class FakeProvider(video_gen.BaseProvider):
+    name = 'fake'
+    def available(self):
+        return True
+    def render(self, shot):
+        return b'mp4bytes'
+
+
+def test_film_earned_with_provider_starts_job(client, monkeypatch):
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard',
+                json={'panels': [{'prompt': 'x', 'narration': 'hi'}]})
+    _earn(client, monkeypatch, pid)
+    monkeypatch.setattr(video_gen, 'get_provider', lambda *a, **k: FakeProvider())
+    r = client.post(f'/api/project/{pid}/film')
+    assert r.status_code == 200
+    job_id = r.get_json()['job_id']
+    for _ in range(50):
+        status = client.get(f'/api/film/{job_id}').get_json()
+        if status['state'] == 'done':
+            break
+        time.sleep(0.05)
+    assert status['state'] == 'done' and status['clips'] == 1

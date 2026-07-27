@@ -17,6 +17,7 @@ from flask import Flask, send_from_directory  # noqa: E402
 from server.ai_routes import ai_bp  # noqa: E402
 from server.motion_routes import motion_bp  # noqa: E402
 from server.archive_routes import archive_bp  # noqa: E402
+from server.project_routes import project_bp  # noqa: E402
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
@@ -24,6 +25,7 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 app.register_blueprint(ai_bp)
 app.register_blueprint(motion_bp)
 app.register_blueprint(archive_bp)
+app.register_blueprint(project_bp)
 
 
 @app.route('/')
