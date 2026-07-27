@@ -97,6 +97,17 @@ def test_review_persists_pinned_verdict(monkeypatch):
     assert projects.latest_verdict(p['id'])['readiness'] == 5
 
 
+def test_revision_history_is_fetchable(client):
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'v1'}]})
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'v2'}]})
+    r1 = client.get(f'/api/project/{pid}/storyboard/1')
+    assert r1.get_json()['panels'][0]['prompt'] == 'v1'
+    assert client.get(f'/api/project/{pid}/storyboard/2').get_json()['revision'] == 2
+    assert client.get(f'/api/project/{pid}/storyboard/3').status_code == 404
+    assert client.get(f'/api/project/{pid}/storyboard/0').status_code == 404
+
+
 # --- routes ---
 
 def test_project_lifecycle_over_http(client):

@@ -61,6 +61,18 @@ def save_storyboard(project_id):
     return jsonify({'project': project, 'revision': revision['revision']})
 
 
+@project_bp.route('/api/project/<project_id>/storyboard/<int:rev>', methods=['GET'])
+def get_revision(project_id, rev):
+    """Fetch one historical revision — the history is append-only, so
+    collaborators can reconcile after concurrent edits."""
+    if _load_or_none(project_id) is None:
+        return jsonify({'error': 'no such project'}), 404
+    revision = projects.load_revision(project_id, rev)
+    if revision is None:
+        return jsonify({'error': 'no such revision'}), 404
+    return jsonify(revision)
+
+
 @project_bp.route('/api/project/<project_id>/heartbeat', methods=['POST'])
 def heartbeat(project_id):
     data = request.get_json(silent=True) or {}
