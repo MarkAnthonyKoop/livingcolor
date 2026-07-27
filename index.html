@@ -154,7 +154,23 @@
         <button class="suggestion" data-prompt="car">car</button>
       </div>
       <p class="status" id="status"></p>
+      <button id="workshop-btn" class="action-btn workshop-open-btn">Story Workshop 🎬</button>
     </div>
+
+    <section id="workshop-section" class="workshop-section" style="display:none">
+      <h2>Story Workshop</h2>
+      <p class="workshop-tagline">Build your storyboard with your mentor — earn your very own film!</p>
+      <div class="workshop-progress"><div id="workshop-progress-fill"></div></div>
+      <p id="workshop-progress-label" class="workshop-label"></p>
+      <p id="workshop-readiness" class="workshop-label"></p>
+      <div id="workshop-mentor" class="workshop-mentor"></div>
+      <div id="workshop-panels" class="workshop-panels"></div>
+      <div class="workshop-actions">
+        <button id="workshop-save-btn" class="action-btn">Save 💾</button>
+        <button id="workshop-review-btn" class="action-btn">Ask my mentor 💬</button>
+        <button id="workshop-film-btn" class="generate-btn">Make my film! 🎬</button>
+      </div>
+    </section>
   </main>
 
   <footer>

@@ -7,6 +7,7 @@ import { setupGenerate } from './generate.js';
 import { setupApiKey } from './setup.js';
 import { initChatUI } from './chat.js';
 import { initChatInput } from './chat-flow.js';
+import { initWorkshop, wireWorkshopButtons } from './workshop.js';
 import { downloadLog, log } from './logger.js';
 
 function init() {
@@ -27,6 +28,8 @@ function init() {
   setupSuggestions();
   initChatUI();
   initChatInput();
+  initWorkshop();
+  wireWorkshopButtons();
 
   document.getElementById('download-log-btn')?.addEventListener('click', downloadLog);
   log('init', 'app initialized');
