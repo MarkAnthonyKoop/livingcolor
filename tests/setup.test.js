@@ -6,16 +6,10 @@ describe('API key management', () => {
     localStorage.clear();
   });
 
-  it('returns obfuscated default key when no localStorage key', () => {
-    const key = getApiKey();
-    expect(key).toBeTruthy();
-    expect(key.startsWith('AIza')).toBe(true);
-    expect(key.length).toBeGreaterThan(30);
-  });
-
-  it('XOR decode produces valid Google API key format', () => {
-    const key = getApiKey();
-    expect(key).toMatch(/^AIzaSy[A-Za-z0-9_-]{33}$/);
+  it('returns empty string when no key is stored — no embedded key ships', () => {
+    // The old XOR-obfuscated default was revoked and removed; an empty key
+    // makes every caller fall back to the server-side Claude path.
+    expect(getApiKey()).toBe('');
   });
 
   it('setApiKey stores in localStorage', () => {
@@ -33,10 +27,9 @@ describe('API key management', () => {
     expect(getApiKey()).toBe('my-custom-key');
   });
 
-  it('getApiKey falls back to default when localStorage cleared', () => {
+  it('getApiKey returns empty again after localStorage cleared', () => {
     setApiKey('temp');
     localStorage.clear();
-    const key = getApiKey();
-    expect(key.startsWith('AIza')).toBe(true);
+    expect(getApiKey()).toBe('');
   });
 });

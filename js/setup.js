@@ -3,16 +3,11 @@
 import { GEMINI_URL } from './state.js';
 import { readStored, writeStored, removeStored } from './storage.js';
 
-// Obfuscated default key (XOR with app name)
-const _p = [13,32,12,8,61,30,7,31,34,36,33,62,59,51,25,0,51,25,12,43,33,11,61,39,66,27,52,45,10,91,2,37,53,121,38,23,81,58,83];
-const _s = 'LivingColor';
-
-function _dk() {
-  return _p.map((c, i) => String.fromCharCode(c ^ _s.charCodeAt(i % _s.length))).join('');
-}
-
+// A Gemini key is OPTIONAL: vision/chat run server-side on Claude, and every
+// caller falls back cleanly when this returns ''. (The formerly embedded
+// XOR-obfuscated key was revoked — "reported as leaked" — and removed.)
 export function getApiKey() {
-  return readStored('gemini_key') || _dk();
+  return readStored('gemini_key') || '';
 }
 
 export function setApiKey(key) {
@@ -100,10 +95,9 @@ export function setupApiKey() {
     });
   }
 
-  // Allow closing overlay by clicking backdrop (only if key already saved)
+  // Allow closing overlay by clicking backdrop — the app works with no key
+  // (server-side Claude), so never trap the user here.
   document.getElementById('setup-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget && getApiKey()) hideSetup();
+    if (e.target === e.currentTarget) hideSetup();
   });
-
-  // Embedded key works out of the box -- only show setup if user wants custom key
 }

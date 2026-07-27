@@ -5,13 +5,12 @@
 ### Pollinations referrerPolicy
 The `<img>` tag for Pollinations results MUST have `referrerpolicy="no-referrer"` (set in `index.html` on `#result-image`). Without it, Pollinations rejects requests from `file://` and some localhost origins. The storyboard image loader in `storyboard.js` also sets `img.referrerPolicy = 'no-referrer'` on dynamically created Image objects.
 
-### The embedded Gemini key is DEAD (2026-07-26)
-The XOR-obfuscated key below is revoked — Google reports it as leaked, so Gemini vision and Veo
-both 403. This is expected in the console and is **not** a bug to chase. Vision and chat run
-server-side on Claude now; the key is dead weight and should be removed.
-
-### XOR Key Obfuscation
-The `_p` array in `setup.js` is the default Gemini API key XOR'd byte-by-byte with the string `"LivingColor"` (the `_s` constant). The `_dk()` function reconstructs it. This is not security -- it just prevents casual scraping. If you need to update the embedded key, XOR the new key with "LivingColor" and replace the `_p` array.
+### No embedded Gemini key (removed 2026-07-26)
+There is no default API key anymore — the old XOR-obfuscated key in `setup.js` was revoked
+(Google reported it as leaked) and has been deleted. `getApiKey()` returns the user's stored key
+or `''`; every caller (`providers.js`, `video.js`, `storyboard.js`) treats an empty key as
+"skip Gemini/Veo and fall back" (vision/chat run server-side on Claude). A user can still paste
+their own key in settings for the direct-Gemini paths.
 
 ### Coordinate Scaling for Flood Fill
 `getPos()` in `canvas.js` scales mouse coordinates by `(canvas.width / rect.width)` to account for CSS-scaled canvases. The canvas element's pixel dimensions differ from its CSS layout dimensions. Without this scaling, flood fill and drawing would hit wrong coordinates. This same fix applies to all pointer events.
@@ -66,5 +65,5 @@ commit you land here**, then verifies it live. Practical consequences for you:
 See README Architecture section for the dependency graph. Key rule: `state.js` has no imports. `app.js` is the only file that touches the DOM for init. All other modules export functions that `app.js` or each other call.
 
 ## Files
-- `app.js` (root) is the old monolith kept as backup. Not loaded by `index.html`.
-- `js/app.js` is the active orchestrator.
+- `js/app.js` is the active orchestrator. (The old root `app.js` monolith was deleted
+  2026-07-26 — recover from git history if ever needed.)
