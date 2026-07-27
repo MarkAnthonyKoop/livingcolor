@@ -3,6 +3,7 @@
 import { getChatMessages, addChatMessage } from './state.js';
 import { speak } from './voice.js';
 import { log } from './logger.js';
+import { show, hide } from './vis.js';
 
 let chatContainer = null;
 let chatButtons = null;
@@ -87,7 +88,7 @@ export function showButtons(buttons) {
     });
     chatButtons.appendChild(el);
   }
-  chatButtons.style.display = 'flex';
+  show(chatButtons, 'flex');
   scrollToBottom();
 }
 
@@ -106,7 +107,7 @@ export function showEmojiGrid(items) {
     grid.appendChild(el);
   }
   chatButtons.appendChild(grid);
-  chatButtons.style.display = 'flex';
+  show(chatButtons, 'flex');
   scrollToBottom();
 }
 
@@ -132,7 +133,7 @@ export function showTextInput() {
   row.appendChild(input);
   row.appendChild(send);
   chatButtons.appendChild(row);
-  chatButtons.style.display = 'flex';
+  show(chatButtons, 'flex');
   input.focus();
   scrollToBottom();
 }
@@ -140,7 +141,7 @@ export function showTextInput() {
 export function hideButtons() {
   if (!chatButtons) return;
   chatButtons.innerHTML = '';
-  chatButtons.style.display = 'none';
+  hide(chatButtons);
 }
 
 export function clearChatUI() {
@@ -148,7 +149,7 @@ export function clearChatUI() {
   hideButtons();
   // Show placeholder
   const ph = document.getElementById('chat-placeholder');
-  if (ph) ph.style.display = 'flex';
+  if (ph) show(ph, 'flex');
 }
 
 function scrollToBottom() {
@@ -160,7 +161,7 @@ function scrollToBottom() {
 
 export function hidePlaceholder() {
   const ph = document.getElementById('chat-placeholder');
-  if (ph) ph.style.display = 'none';
+  if (ph) hide(ph);
 }
 
 // Faint system status line in chat + persistent log.

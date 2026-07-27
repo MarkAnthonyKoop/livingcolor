@@ -12,6 +12,7 @@ import {
   startVideoFallback, setLtxVideoCallback,
 } from './storyboard.js';
 import { log } from './logger.js';
+import { show, hide } from './vis.js';
 
 export { setVideoStatus };
 
@@ -21,10 +22,10 @@ export function resetVideoUI() {
   const videoStatus = document.getElementById('video-status');
   const videoBtn = document.getElementById('download-video-btn');
   const resultVideo = document.getElementById('result-video');
-  videoStatus.style.display = 'none';
+  hide(videoStatus);
   videoStatus.className = 'video-status';
-  videoBtn.style.display = 'none';
-  resultVideo.style.display = 'none';
+  hide(videoBtn);
+  hide(resultVideo);
   resultVideo.src = '';
 }
 
@@ -46,8 +47,8 @@ function showGeneratedVideo(b64) {
   // a SECOND copy at width/height:100%, which blew the result panel past the
   // viewport during playback.
   resultVideo.src = url;
-  resultImg.style.display = 'none';
-  videoBtn.style.display = '';
+  hide(resultImg);
+  show(videoBtn);
 
   setVideoStatus('Video ready!', 'done');
   if (onVideoReady) { onVideoReady(url); onVideoReady = null; }

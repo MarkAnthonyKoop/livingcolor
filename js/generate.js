@@ -1,6 +1,7 @@
 // Generate flow: now routes through chat. Kept: download helpers.
 
 import { startChatFlow } from './chat-flow.js';
+import { show, hide, isShown } from './vis.js';
 
 export function setStatus(msg, isError) {
   const el = document.getElementById('status');
@@ -13,8 +14,8 @@ export async function generate() {
   const btnText = btn.querySelector('.btn-text');
   const btnLoad = btn.querySelector('.btn-loading');
   btn.disabled = true;
-  btnText.style.display = 'none';
-  btnLoad.style.display = 'inline';
+  hide(btnText);
+  show(btnLoad, 'inline');
   setStatus('');
   try {
     await startChatFlow();
@@ -23,13 +24,13 @@ export async function generate() {
     setStatus('Error: ' + err.message, true);
   }
   btn.disabled = false;
-  btnText.style.display = '';
-  btnLoad.style.display = 'none';
+  show(btnText);
+  hide(btnLoad);
 }
 
 export function downloadResult() {
   const video = document.getElementById('result-video');
-  if (video.style.display !== 'none' && video.src) {
+  if (isShown(video) && video.src) {
     downloadVideoResult();
     return;
   }

@@ -10,10 +10,10 @@ function mountAppShell() {
   document.body.innerHTML = `
     <div class="result-panel">
       <div id="chat-container"></div>
-      <img id="result-image" style="display:none">
-      <video id="result-video" style="display:none"></video>
-      <button id="download-video-btn" style="display:none"></button>
-      <div class="video-status" id="video-status" style="display:none">
+      <img id="result-image" hidden>
+      <video id="result-video" hidden></video>
+      <button id="download-video-btn" hidden></button>
+      <div class="video-status" id="video-status" hidden>
         <span id="video-status-text"></span>
       </div>
     </div>`;
@@ -23,8 +23,8 @@ beforeEach(mountAppShell);
 
 describe('hidden media elements stay hidden in the chat UI', () => {
   it('index.html marks them hidden to begin with', () => {
-    expect(document.getElementById('result-image').style.display).toBe('none');
-    expect(document.getElementById('result-video').style.display).toBe('none');
+    expect(document.getElementById('result-image').hidden).toBe(true);
+    expect(document.getElementById('result-video').hidden).toBe(true);
   });
 
   it('no source file un-hides #result-video', async () => {
@@ -35,7 +35,7 @@ describe('hidden media elements stay hidden in the chat UI', () => {
     for (const file of ['js/video.js', 'js/storyboard.js', 'js/chat-flow.js']) {
       const src = fs.readFileSync(file, 'utf8');
       expect(src, `${file} un-hides #result-video`).not.toMatch(
-        /resultVideo\.style\.display\s*=\s*['"]['"]/);
+        /resultVideo\.style\.display\s*=\s*['"]['"]|show\(resultVideo/);
     }
   });
 
@@ -44,7 +44,7 @@ describe('hidden media elements stay hidden in the chat UI', () => {
     for (const file of ['js/video.js', 'js/storyboard.js', 'js/chat-flow.js']) {
       const src = fs.readFileSync(file, 'utf8');
       expect(src, `${file} un-hides #result-image`).not.toMatch(
-        /resultImg\.style\.display\s*=\s*['"]['"]/);
+        /resultImg\.style\.display\s*=\s*['"]['"]|show\(resultImg/);
     }
   });
 });

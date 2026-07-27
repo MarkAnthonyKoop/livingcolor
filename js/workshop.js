@@ -11,6 +11,7 @@ import { readStored, writeStored } from './storage.js';
 import { speak } from './voice.js';
 import { attachMic } from './mic.js';
 import { log } from './logger.js';
+import { show, hide, isShown } from './vis.js';
 
 let project = null;
 let panels = [blankPanel()];
@@ -29,13 +30,13 @@ export function initWorkshop() {
 
 async function toggleWorkshop() {
   const section = $('workshop-section');
-  const open = section.style.display !== 'none';
+  const open = isShown(section);
   if (open) {
-    section.style.display = 'none';
+    hide(section);
     stopHeartbeat();
     return;
   }
-  section.style.display = '';
+  show(section);
   await resumeOrCreate();
   renderPanels();
   startHeartbeat();
@@ -259,7 +260,7 @@ export async function playFilm(jobId) {
   const base = `/api/project/${encodeURIComponent(project.id)}/films/${film.job_id}`;
   const whole = film.narrated || film.film;   // narrated mix beats silent stitch
   if (whole) {
-    player.style.display = '';
+    show(player);
     player.loop = true;
     player.src = `${base}/${whole}`;
     player.play().catch(() => {});
@@ -275,7 +276,7 @@ export async function playFilm(jobId) {
     player.play().catch(() => {});     // autoplay may need the user's tap
     if (narrations[i]) speak(narrations[i]);   // the storyteller's own words
   };
-  player.style.display = '';
+  show(player);
   player.onended = () => {
     i = (i + 1) % urls.length;         // loop the film
     startClip();

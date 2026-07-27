@@ -2,6 +2,7 @@
 
 import { GEMINI_URL } from './state.js';
 import { readStored, writeStored, removeStored } from './storage.js';
+import { show, hide } from './vis.js';
 
 // A Gemini key is OPTIONAL: vision/chat run server-side on Claude, and every
 // caller falls back cleanly when this returns ''. (The formerly embedded
@@ -18,14 +19,14 @@ export function showSetup(prefill) {
   const overlay = document.getElementById('setup-overlay');
   const input = document.getElementById('api-key-input');
   const errEl = document.getElementById('setup-error');
-  overlay.style.display = 'flex';
+  show(overlay, 'flex');
   errEl.textContent = '';
   if (prefill) input.value = prefill;
   input.focus();
 }
 
 export function hideSetup() {
-  document.getElementById('setup-overlay').style.display = 'none';
+  hide(document.getElementById('setup-overlay'));
 }
 
 export function setupApiKey() {

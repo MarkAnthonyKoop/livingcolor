@@ -16,14 +16,14 @@ let initWorkshop, wireWorkshopButtons;
 function mountDom() {
   document.body.innerHTML = `
     <button id="workshop-btn"></button>
-    <section id="workshop-section" style="display:none">
+    <section id="workshop-section" hidden>
       <div class="workshop-progress"><div id="workshop-progress-fill"></div></div>
       <p id="workshop-progress-label"></p>
       <p id="workshop-readiness"></p>
       <p id="workshop-machine"></p>
       <div id="workshop-mentor"></div>
       <div id="workshop-panels"></div>
-      <video id="workshop-film" style="display:none"></video>
+      <video id="workshop-film" hidden></video>
       <button id="workshop-mic-btn"></button>
       <input id="workshop-chat-input" />
       <button id="workshop-chat-send"></button>
@@ -59,7 +59,7 @@ function stubServer(overrides = {}) {
 async function openWorkshop() {
   document.getElementById('workshop-btn').click();
   await vi.waitFor(() => {
-    expect(document.getElementById('workshop-section').style.display).not.toBe('none');
+    expect(document.getElementById('workshop-section').hidden).toBe(false);
     expect(document.querySelector('#workshop-panels textarea')).toBeTruthy();
   });
 }
@@ -177,7 +177,7 @@ describe('mentor chat', () => {
     stubServer();
     await openWorkshop();
     // jsdom has no SpeechRecognition — attachMic must hide the button, not throw
-    expect(document.getElementById('workshop-mic-btn').style.display).toBe('none');
+    expect(document.getElementById('workshop-mic-btn').hidden).toBe(true);
   });
 });
 
@@ -194,7 +194,7 @@ describe('film playback', () => {
     window.HTMLMediaElement.prototype.play = vi.fn(async () => {});
     await mod.playFilm('c'.repeat(12));
     const player = document.getElementById('workshop-film');
-    expect(player.style.display).not.toBe('none');
+    expect(player.hidden).toBe(false);
     const path = new URL(player.src, 'http://localhost/').pathname;
     expect(path).toBe(`/api/project/${PID}/films/${'c'.repeat(12)}/shot_01.mp4`);
   });

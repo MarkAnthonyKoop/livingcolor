@@ -5,6 +5,7 @@ import {
   getCurrentTool, setCurrentTool, setBrushSize, setFillPattern,
 } from './state.js';
 import { undo, clearCanvas } from './canvas.js';
+import { show, hide } from './vis.js';
 
 export function selectTool(tool) {
   setCurrentTool(tool);
@@ -13,7 +14,8 @@ export function selectTool(tool) {
   });
   const canvas = document.getElementById('drawing-canvas');
   canvas.style.cursor = tool === 'fill' ? 'crosshair' : tool === 'eraser' ? 'cell' : 'crosshair';
-  document.getElementById('pattern-picker').style.display = tool === 'fill' ? 'flex' : 'none';
+  const picker = document.getElementById('pattern-picker');
+  if (tool === 'fill') show(picker, 'flex'); else hide(picker);
 }
 
 export function selectColor(color, swatch) {

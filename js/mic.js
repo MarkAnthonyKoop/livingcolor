@@ -2,6 +2,7 @@
 // No external service from the page — the browser engine does the work.
 
 import { log } from './logger.js';
+import { hide } from './vis.js';
 
 export function micSupported() {
   return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -12,7 +13,7 @@ export function micSupported() {
 export function attachMic(button, input, onResult) {
   const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Ctor || !button || !input) {
-    if (button) button.style.display = 'none';
+    if (button) hide(button);
     return false;
   }
   let active = null;

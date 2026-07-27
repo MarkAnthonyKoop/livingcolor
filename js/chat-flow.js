@@ -14,6 +14,7 @@ import { readStored } from './storage.js';
 import { stopLiving } from './living.js';
 import { stopRegionAnimation } from './regions.js';
 import { playStory, stopStory } from './story.js';
+import { show } from './vis.js';
 
 const EMOJI_ITEMS = [
   { emoji: '🦋', label: 'butterfly' }, { emoji: '🐱', label: 'cat' },
@@ -38,7 +39,7 @@ export async function startChatFlow() {
   resetVideoUI();
   hidePlaceholder();
   hideButtons();
-  document.getElementById('chat-input-row').style.display = 'flex';
+  show(document.getElementById('chat-input-row'), 'flex');
 
   appendMessage({ role: 'ai', type: 'loading', content: 'Looking at your drawing...' });
 
@@ -116,7 +117,7 @@ async function startGeneration(subject) {
 
     // Store reference for video gen and download
     const resultImg = document.getElementById('result-image');
-    if (resultImg) { resultImg.src = url; resultImg.style.display = 'none'; }
+    if (resultImg) { resultImg.src = url; hide(resultImg); }
 
     archiveDrawing(subject, url, prompt);
     startVideoForChat(prompt, subject);
@@ -214,7 +215,7 @@ export function initChatInput() {
 
   // Show the input row always so user can interact anytime
   const row = document.getElementById('chat-input-row');
-  if (row) row.style.display = 'flex';
+  if (row) show(row, 'flex');
 
   function send() {
     const text = input.value.trim();
@@ -259,7 +260,7 @@ function abortCurrentWork() {
 
 async function handleFreeFormMessage(text) {
   log('flow', 'handleFreeFormMessage', { text });
-  document.getElementById('chat-input-row').style.display = 'flex';
+  show(document.getElementById('chat-input-row'), 'flex');
 
   const lower = text.toLowerCase();
   if (lower.includes('draw') && (lower.includes('again') || lower.includes('new'))) {

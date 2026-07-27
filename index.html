@@ -10,13 +10,13 @@
 </head>
 <body>
   <!-- API Key Setup Overlay -->
-  <div id="setup-overlay" class="setup-overlay" style="display:none">
+  <div id="setup-overlay" class="setup-overlay" hidden>
     <div class="setup-card">
       <h2>Welcome to LivingColor</h2>
       <p>Optional: add your own Google Gemini API key for extra features. The app works without one.</p>
       <p class="setup-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
       <input type="password" id="api-key-input" class="api-key-input" placeholder="Paste your Gemini API key here" autocomplete="off" />
-      <button id="save-key-btn" class="generate-btn" style="width:100%">Save &amp; Start Drawing</button>
+      <button id="save-key-btn" class="generate-btn fullwidth">Save &amp; Start Drawing</button>
       <p id="setup-error" class="setup-error"></p>
       <label class="backend-toggle">
         <input type="checkbox" id="use-backend-toggle">
@@ -26,7 +26,7 @@
         <input type="checkbox" id="voice-toggle">
         <span>AI voice (reads chat aloud) 🔊</span>
       </label>
-      <button id="download-log-btn" class="action-btn secondary" style="margin-top:0.75rem;width:100%">Download conversation log</button>
+      <button id="download-log-btn" class="action-btn secondary fullwidth toppad">Download conversation log</button>
     </div>
   </div>
 
@@ -77,7 +77,7 @@
         <div class="color-bar">
           <div class="color-swatches" id="color-swatches"></div>
           <input type="color" id="custom-color" value="#000000" title="Custom color">
-          <div class="pattern-picker" id="pattern-picker" style="display:none">
+          <div class="pattern-picker" id="pattern-picker" hidden>
             <span class="pattern-label">Fill:</span>
             <button class="pattern-btn active" data-pattern="solid">Solid</button>
             <button class="pattern-btn" data-pattern="rainbow">Rainbow</button>
@@ -99,23 +99,23 @@
           <p>Draw something, then click<br><strong>Bring to Life!</strong></p>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-buttons" id="chat-buttons" style="display:none"></div>
-        <div class="chat-input-row" id="chat-input-row" style="display:none">
+        <div class="chat-buttons" id="chat-buttons" hidden></div>
+        <div class="chat-input-row" id="chat-input-row" hidden>
           <input type="text" id="chat-input" placeholder="Type a message… (Esc to stop)" />
           <button id="chat-send-btn" class="chat-send-btn" title="Send">→</button>
         </div>
         <!-- Hidden elements for video/image download compatibility -->
-        <img id="result-image" style="display:none" alt="AI generated image" referrerpolicy="no-referrer">
-        <video id="result-video" autoplay loop muted playsinline style="display:none"></video>
-        <canvas id="sketch-overlay" style="display:none"></canvas>
-        <div class="morph-container" id="morph-container" style="display:none"></div>
-        <div class="video-status" id="video-status" style="display:none">
+        <img id="result-image" hidden alt="AI generated image" referrerpolicy="no-referrer">
+        <video id="result-video" autoplay loop muted playsinline hidden></video>
+        <canvas id="sketch-overlay" hidden></canvas>
+        <div class="morph-container" id="morph-container" hidden></div>
+        <div class="video-status" id="video-status" hidden>
           <span class="spinner"></span>
           <span id="video-status-text">Generating video...</span>
         </div>
-        <div class="result-actions" id="result-actions" style="display:none">
+        <div class="result-actions" id="result-actions" hidden>
           <button id="download-btn" class="action-btn">Download</button>
-          <button id="download-video-btn" class="action-btn" style="display:none">Download Video</button>
+          <button id="download-video-btn" class="action-btn" hidden>Download Video</button>
           <button id="retry-btn" class="action-btn secondary">Regenerate</button>
         </div>
       </div>
@@ -126,7 +126,7 @@
         <input type="text" id="style-prompt" placeholder="Optional style hint — e.g. &quot;watercolor&quot;, &quot;pixel art&quot;, &quot;3D render&quot;, &quot;oil painting&quot;" />
         <button id="generate-btn" class="generate-btn">
           <span class="btn-text">Bring to Life! ✨</span>
-          <span class="btn-loading" style="display:none">
+          <span class="btn-loading" hidden>
             <span class="spinner"></span>
             Thinking...
           </span>
@@ -158,15 +158,15 @@
       <button id="gallery-btn" class="action-btn workshop-open-btn">Gallery 🖼️</button>
     </div>
 
-    <section id="gallery-section" class="workshop-section" style="display:none">
+    <section id="gallery-section" class="workshop-section" hidden>
       <h2>Gallery</h2>
       <p class="workshop-tagline">Everything you've drawn and every story you've told.</p>
       <div id="gallery-grid" class="gallery-grid"></div>
-      <button id="gallery-more-btn" class="action-btn" style="display:none">Show more</button>
+      <button id="gallery-more-btn" class="action-btn" hidden>Show more</button>
       <div id="gallery-detail" class="gallery-detail"></div>
     </section>
 
-    <section id="workshop-section" class="workshop-section" style="display:none">
+    <section id="workshop-section" class="workshop-section" hidden>
       <h2>Story Workshop</h2>
       <p class="workshop-tagline">Build your storyboard with your mentor — earn your very own film!</p>
       <div class="workshop-progress"><div id="workshop-progress-fill"></div></div>
@@ -174,7 +174,7 @@
       <p id="workshop-readiness" class="workshop-label"></p>
       <p id="workshop-machine" class="workshop-label"></p>
       <div id="workshop-mentor" class="workshop-mentor"></div>
-      <video id="workshop-film" class="workshop-film" controls playsinline style="display:none"></video>
+      <video id="workshop-film" class="workshop-film" controls playsinline hidden></video>
       <div id="workshop-panels" class="workshop-panels"></div>
       <div class="chat-input-row workshop-chat-row">
         <button id="workshop-mic-btn" class="chat-send-btn" title="Talk to your mentor">🎤</button>

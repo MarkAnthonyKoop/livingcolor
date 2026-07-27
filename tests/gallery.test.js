@@ -7,9 +7,9 @@ let initGallery;
 function mountDom() {
   document.body.innerHTML = `
     <button id="gallery-btn"></button>
-    <section id="gallery-section" style="display:none">
+    <section id="gallery-section" hidden>
       <div id="gallery-grid"></div>
-      <button id="gallery-more-btn" style="display:none"></button>
+      <button id="gallery-more-btn" hidden></button>
       <div id="gallery-detail"></div>
     </section>`;
 }
@@ -64,13 +64,13 @@ describe('gallery listing', () => {
   it('hides "show more" when everything is on one page', async () => {
     stubGallery(2);
     await openGallery();
-    expect(document.getElementById('gallery-more-btn').style.display).toBe('none');
+    expect(document.getElementById('gallery-more-btn').hidden).toBe(true);
   });
 
   it('shows "show more" when the archive is bigger than the page', async () => {
     stubGallery(50);
     await openGallery();
-    expect(document.getElementById('gallery-more-btn').style.display).not.toBe('none');
+    expect(document.getElementById('gallery-more-btn').hidden).toBe(false);
   });
 
   it('says so when the archive is empty', async () => {

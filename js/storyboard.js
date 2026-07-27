@@ -7,6 +7,7 @@ import { getApiKey } from './setup.js';
 import { getCanvasBase64 } from './canvas.js';
 import { startMagicEffect } from './particles.js';
 import { log } from './logger.js';
+import { show, hide } from './vis.js';
 
 let storyboardAnim = null;
 let ltxVideoCallback = null;
@@ -16,7 +17,7 @@ export function setLtxVideoCallback(fn) { ltxVideoCallback = fn; }
 export function setVideoStatus(msg, state) {
   const el = document.getElementById('video-status');
   const textEl = document.getElementById('video-status-text');
-  el.style.display = 'flex';
+  show(el, 'flex');
   textEl.textContent = msg;
   el.className = 'video-status' + (state ? ' ' + state : '');
 }
@@ -61,8 +62,8 @@ function showVideo(blobUrl) {
   // Keep the raw element hidden — it backs the download button only; the chat
   // UI renders the video in a bubble. See the note in video.js/showGeneratedVideo.
   resultVideo.src = blobUrl;
-  resultImg.style.display = 'none';
-  document.getElementById('download-video-btn').style.display = '';
+  hide(resultImg);
+  show(document.getElementById('download-video-btn'));
   if (ltxVideoCallback) { ltxVideoCallback(blobUrl); ltxVideoCallback = null; }
 }
 

@@ -2,6 +2,7 @@
 // Read-only viewer over /api/gallery (server/gallery_routes.py).
 
 import { log } from './logger.js';
+import { show, hide, isShown } from './vis.js';
 
 let offset = 0;
 let total = 0;
@@ -19,9 +20,9 @@ export function initGallery() {
 
 async function toggleGallery() {
   const section = $('gallery-section');
-  const open = section.style.display !== 'none';
-  if (open) { section.style.display = 'none'; return; }
-  section.style.display = '';
+  const open = isShown(section);
+  if (open) { hide(section); return; }
+  show(section);
   $('gallery-grid').innerHTML = '';
   $('gallery-detail').innerHTML = '';
   offset = 0;
@@ -43,7 +44,7 @@ async function loadPage() {
     return;
   }
   const more = $('gallery-more-btn');
-  if (more) more.style.display = offset < total ? '' : 'none';
+  if (more) { if (offset < total) show(more); else hide(more); }
   const empty = $('gallery-grid').children.length === 0;
   if (empty) $('gallery-grid').textContent = 'Nothing saved yet — draw something and bring it to life!';
 }
