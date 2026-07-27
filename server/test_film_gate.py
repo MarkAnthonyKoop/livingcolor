@@ -162,6 +162,24 @@ def test_film_refuses_with_reasons(client):
     assert r.get_json()['gate']['reasons']
 
 
+def test_money_guard_provider_never_touched_when_refused(client, monkeypatch):
+    """Mirror of R's prod money guard: a refused film request must not touch
+    the provider AT ALL — the gate check runs strictly before anything that
+    could spend Mark's prepaid balance."""
+    class TripwireProvider(video_gen.BaseProvider):
+        name = 'tripwire'
+        def available(self):
+            raise AssertionError('provider touched on a gate-refused request')
+        def render(self, shot):
+            raise AssertionError('render invoked on a gate-refused request')
+    monkeypatch.setattr(video_gen, 'get_provider',
+                        lambda *a, **k: TripwireProvider())
+    pid = client.post('/api/project', json={}).get_json()['id']
+    client.post(f'/api/project/{pid}/storyboard', json={'panels': [{'prompt': 'x'}]})
+    r = client.post(f'/api/project/{pid}/film')     # ungated: 0s, no verdict
+    assert r.status_code == 403                     # tripwire never fired
+
+
 def _earn(client, monkeypatch, pid):
     """Legitimately satisfy the gate: real verdict on the current revision."""
     monkeypatch.setenv('LIVINGCOLOR_GATE_SECONDS', '0')
