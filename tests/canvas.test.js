@@ -83,3 +83,27 @@ describe('clearCanvas', () => {
     expect(pixel[2]).toBe(255);
   });
 });
+
+describe('resizeCanvas keeps a fresh canvas blank (CDP-found bug)', () => {
+  it('a freshly resized canvas reads as blank', async () => {
+    const { isCanvasBlank, resizeCanvas } = await import('../js/canvas.js');
+    const { canvas, container } = createMockCanvas(400, 300, 300, 150);
+    container.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 300 });
+    // simulate init: default 300x150 transparent surface, then the app resizes
+    resizeCanvas();
+    expect(canvas.width).toBe(400);
+    expect(isCanvasBlank()).toBe(true);   // putImageData stamped transparency here
+  });
+
+  it('an actual drawing survives the resize', async () => {
+    const { isCanvasBlank, resizeCanvas } = await import('../js/canvas.js');
+    const { ctx, container } = createMockCanvas(400, 300, 400, 300);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 400, 300);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(50, 50, 60, 60);         // the child's drawing
+    container.getBoundingClientRect = () => ({ left: 0, top: 0, width: 500, height: 400 });
+    resizeCanvas();
+    expect(isCanvasBlank()).toBe(false);  // drawing still there
+  });
+});

@@ -11,7 +11,18 @@ export function resizeCanvas() {
   const ctx = getCtx();
   const container = canvas.parentElement;
   const rect = container.getBoundingClientRect();
-  const prevData = ctx ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
+  // Snapshot onto a canvas (not raw ImageData): drawImage composites, so the
+  // old surface's TRANSPARENT pixels leave the new white fill intact.
+  // putImageData would stamp them back as transparent-black — at init that
+  // overwrote the white fill with the default 300x150 surface and made a
+  // freshly loaded canvas read as "not blank".
+  let prev = null;
+  if (ctx && canvas.width && canvas.height) {
+    prev = document.createElement('canvas');
+    prev.width = canvas.width;
+    prev.height = canvas.height;
+    prev.getContext('2d').drawImage(canvas, 0, 0);
+  }
 
   canvas.width = rect.width;
   canvas.height = rect.height;
@@ -19,8 +30,8 @@ export function resizeCanvas() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (prevData) {
-    ctx.putImageData(prevData, 0, 0);
+  if (prev) {
+    ctx.drawImage(prev, 0, 0);
   }
 }
 
