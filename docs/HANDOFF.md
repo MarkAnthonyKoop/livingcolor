@@ -33,12 +33,12 @@ PYTHONPATH=. ~/claude/.venv/bin/python -m pytest server/ -q   # Python
    `curl -s https://livingcolor.cc.middlematter.com/api/... ` — or simply ask whether
    `VEO_API_KEY` is in credanger (`credanger has VEO_API_KEY`) and whether the box env carries it.
    Until that key exists, every "animation" remains a CSS breathing effect.
-1. ~~Push to GitHub~~ **DONE** — all 38 commits pushed 2026-07-26, master @ `5bffdac`, in sync
-   with `origin`. Note: GitHub flags **9 Dependabot vulnerabilities** (3 high / 3 moderate /
-   3 low). Almost certainly dev dependencies (vite/vitest tree) rather than shipped code — the app
-   ships raw ES modules with no bundler output — but that was not verified. Worth ten minutes.
-2. **Set the git identity.** Every commit is attributed to the auto-derived
-   `marknadon@Marks-MacBook-Neo.local`. `git config --global user.email …` then amend if desired.
+1. ~~Push to GitHub~~ **DONE** — in sync with `origin`. ~~9 Dependabot vulnerabilities~~
+   **RESOLVED 2026-07-26 (evening)**: verified 8 were dev-tree-only (vite/vitest undici
+   transitives) and fixed via `npm audit fix`; the 1 runtime alert (Flask sessions `Vary: Cookie`,
+   low, feature unused here) closed by bumping flask 3.1.1 → 3.1.3.
+2. ~~Set the git identity~~ **DONE 2026-07-26** — `git config --global` set to Mark Nadon
+   <markanthonykoop@gmail.com>.
 3. **Make the health check durable.** R's health monitor is bound to their session — when it ends,
    monitoring stops. Move it to a cron on the box (`remote_server/health_check.sh` exists) or a
    `/schedule` cloud agent.
@@ -76,9 +76,9 @@ Economics, provider comparison, and the subscription-vs-API trap are all in CREA
 
 ## Cleanup worth doing
 
-- Remove the XOR-obfuscated Gemini key from `js/setup.js` — that key is dead ("reported as
-  leaked") and vision/chat are server-side now, so it's pure dead weight.
-- Delete the legacy root `app.js` monolith (superseded by `js/app.js`; `index.html` doesn't load it).
+- ~~Remove the XOR-obfuscated Gemini key from `js/setup.js`~~ **DONE 2026-07-26** — no embedded
+  key ships; `getApiKey()` returns the stored key or `''` and all callers fall back cleanly.
+- ~~Delete the legacy root `app.js` monolith~~ **DONE 2026-07-26** (git history keeps it).
 - Never built, and the highest-value non-video feature: **an archive gallery**. The server
   faithfully archives every drawing and story to disk and there is no way to view any of it.
 
@@ -130,14 +130,18 @@ It fixes the "results are superficial" problem at the root. A four-scene story i
 seconds gives Veo thin material; a storyboard a person shaped over two hours gives it something
 worth rendering. The gate produces *better input*, and the cost control falls out for free.
 
-### Progress 2026-07-26 (later session): the server half EXISTS now
-`server/projects.py` (persistent projects, append-only revisions, anti-gaming engagement
-accrual), `server/mentor.py` (rubric verdicts pinned to the revision judged + the pure-code
-`film_gate`), `server/project_routes.py` (REST + gated `/api/film`). 46 tests, each defense
-mutation-tested red. Env knobs: `LIVINGCOLOR_GATE_SECONDS` (7200), `LIVINGCOLOR_GATE_READINESS`
-(7). **Still missing: the client-side workshop UI** (panel editor, mentor chat, heartbeat loop —
-nothing in `js/` calls these endpoints yet), and Veo funding (checked: `credanger has VEO_API_KEY`
-still exits 1).
+### Progress 2026-07-26 (later session): BOTH halves built
+**Server**: `server/projects.py` (persistent projects, append-only revisions, anti-gaming
+engagement accrual), `server/mentor.py` (rubric verdicts pinned to the revision judged + the
+pure-code `film_gate`), `server/project_routes.py` (REST + gated `/api/film`). Env knobs:
+`LIVINGCOLOR_GATE_SECONDS` (7200), `LIVINGCOLOR_GATE_READINESS` (7).
+**Client**: `js/workshop-core.js` (pure logic) + `js/workshop.js` (Story Workshop UI — panel
+editor with Pollinations stills, save/resume across visits, mentor reviews spoken aloud, 30s
+heartbeat, film button that relays gate refusals as mentorship). 61 new tests across both halves
+(198 js + 168 py total), every defense mutation-tested red.
+**Still missing**: live-deploy verification of these endpoints, Veo funding (checked this
+session: `credanger has VEO_API_KEY` still exits 1 — chase R), and polish (voice input for the
+child, mentor-suggested panel edits, showing the finished film in the workshop).
 
 ### What it needs that does NOT exist yet
 - **Persistent projects.** The app is stateless per drawing today. A storyboard must survive across
